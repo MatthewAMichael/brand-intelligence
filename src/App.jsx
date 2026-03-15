@@ -150,6 +150,7 @@ Schema:
 Score meanings — IMPORTANT: scores reflect how well the company CURRENTLY realises value. LOW score = large gap = HIGH opportunity for a PE investor. HIGH score = already well-realised = less upside.
 Be specific, financially grounded, and reference real industry dynamics. Use real benchmarks where known.
 CRITICAL: Return only the JSON object. Nothing else.
+IMPORTANT: All financial figures must include the correct currency symbol. Use AUD (e.g. "AUD 2.4bn") for Australian companies, USD (e.g. "USD 1.2bn") for US companies, GBP (e.g. "£840m") for UK companies, and the appropriate local currency for all others. Never output a bare number without a currency symbol for any financial field.
 IMPORTANT: Be concise in all string fields — 1-2 sentences maximum per insight/description. Limit capabilityGaps to 4 items maximum. Limit catalysts and risks to 4 items each. Limit peerBenchmarks to 3 items. Limit priorityRoadmap to 3 phases. Keep all strings short — this is a data object not an essay.`;
 
 // ─── API ───────────────────────────────────────────────────────────────────
@@ -666,50 +667,57 @@ function AnalysisView({r,weights,weightedScore,watchlist,setWatchlist,compareIds
       {vb.currentEVEstimate&&(
         <>
           <Divider title="VALUE BRIDGE — ENTERPRISE VALUE OPPORTUNITY"/>
-          {/* Top row: EV flow */}
+          {/* Top row: EV flow — all boxes same height via minHeight + flex */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 20px 1fr 20px 1fr 20px 1fr 20px 1fr",
-            alignItems:"center",gap:0,marginBottom:8}}>
+            alignItems:"stretch",gap:0,marginBottom:8}}>
             {[
-              ["Current EV",       vb.currentEVEstimate,       C.muted,   C.border],
+              ["Current EV",      vb.currentEVEstimate,      C.muted,   C.border],
               null,
-              ["Revenue Growth",   vb.revenueGrowthComponent,  C.accentB, C.accentB],
+              ["Revenue Growth",  vb.revenueGrowthComponent, C.accentB, C.accentB],
               null,
-              ["Cost Efficiency",  vb.costEfficiencyComponent, C.gold,    C.gold],
+              ["Cost Efficiency", vb.costEfficiencyComponent,C.gold,    C.gold],
               null,
-              ["Brand Multiple",   vb.brandMultipleExpansion,  C.purple,  C.purple],
+              ["Brand Multiple",  vb.brandMultipleExpansion, C.purple,  C.purple],
               null,
-              ["Potential EV",     vb.potentialEVEstimate,     C.accent,  C.accent],
+              ["Potential EV",    vb.potentialEVEstimate,    C.accent,  C.accent],
             ].map((item,i)=> item===null ? (
-              <div key={i} style={{textAlign:"center",color:C.muted,fontSize:11}}>→</div>
+              <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"center",
+                color:C.muted,fontSize:11}}>→</div>
             ) : (
               <div key={i} style={{
                 background: item[3]===C.border ? C.surface : item[3]+"12",
                 border:`1px solid ${item[3]}${item[3]===C.border?"":"33"}`,
-                borderRadius:6,padding:"10px 8px",textAlign:"center"}}>
-                <div style={{fontFamily:"DM Mono",fontSize:9,fontWeight:700,
-                  color:item[2],letterSpacing:1,marginBottom:5,textTransform:"uppercase"}}>
-                  {item[0]}
-                </div>
+                borderRadius:6,padding:"10px 8px",
+                display:"flex",flexDirection:"column",
+                alignItems:"center",justifyContent:"center",
+                minHeight:64}}>
+                <div style={{fontFamily:"DM Mono",fontSize:9,fontWeight:700,color:item[2],
+                  letterSpacing:1,marginBottom:6,textTransform:"uppercase",
+                  textAlign:"center",lineHeight:1.3}}>{item[0]}</div>
                 <div style={{fontFamily:"DM Mono",fontSize:13,fontWeight:600,
-                  color:item[2],lineHeight:1.2}}>{item[1]||"—"}</div>
+                  color:item[2],lineHeight:1.2,textAlign:"center"}}>{item[1]||"—"}</div>
               </div>
             ))}
           </div>
-          {/* Bottom row: return metrics */}
+          {/* Bottom row: return metrics — same height as top row boxes */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6,marginBottom:10}}>
             {[
-              ["Total Uplift",       vb.totalUpliftEstimate,      C.green,  C.greenDim],
-              ["Investment Reqd",    vb.totalInvestmentRequired,  C.gold,   C.goldDim],
-              ["Payback Period",     vb.paybackPeriod,            C.accentB,C.accentBDim],
-              ["Directional IRR",    vb.directionalIRR,           C.accent, C.accentDim],
-              ["Acquisition Guide",  vb.acquisitionPriceGuidance, C.purple, C.purpleDim],
+              ["Total Uplift",      vb.totalUpliftEstimate,      C.green,  C.greenDim],
+              ["Investment Reqd",   vb.totalInvestmentRequired,  C.gold,   C.goldDim],
+              ["Payback Period",    vb.paybackPeriod,            C.accentB,C.accentBDim],
+              ["Directional IRR",   vb.directionalIRR,           C.accent, C.accentDim],
+              ["Acquisition Guide", vb.acquisitionPriceGuidance, C.purple, C.purpleDim],
             ].map(([label,val,col,bg])=>(
               <div key={label} style={{background:bg,border:`1px solid ${col}30`,
-                borderRadius:6,padding:"9px 10px",textAlign:"center"}}>
-                <div style={{fontFamily:"DM Mono",fontSize:9,fontWeight:700,
-                  color:col,letterSpacing:1,marginBottom:5,textTransform:"uppercase"}}>{label}</div>
+                borderRadius:6,padding:"10px 8px",
+                display:"flex",flexDirection:"column",
+                alignItems:"center",justifyContent:"center",
+                minHeight:64}}>
+                <div style={{fontFamily:"DM Mono",fontSize:9,fontWeight:700,color:col,
+                  letterSpacing:1,marginBottom:6,textTransform:"uppercase",
+                  textAlign:"center",lineHeight:1.3}}>{label}</div>
                 <div style={{fontFamily:"DM Mono",fontSize:13,fontWeight:600,
-                  color:col,lineHeight:1.2}}>{val||"—"}</div>
+                  color:col,lineHeight:1.2,textAlign:"center"}}>{val||"—"}</div>
               </div>
             ))}
           </div>
