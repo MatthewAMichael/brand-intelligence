@@ -666,49 +666,50 @@ function AnalysisView({r,weights,weightedScore,watchlist,setWatchlist,compareIds
       {vb.currentEVEstimate&&(
         <>
           <Divider title="VALUE BRIDGE — ENTERPRISE VALUE OPPORTUNITY"/>
-          {/* Top row: EV flow bar */}
-          <div style={{marginBottom:10}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 24px 1fr 24px 1fr 24px 1fr 24px 1fr",
-              alignItems:"center",gap:0,marginBottom:10}}>
-              {[
-                ["CURRENT EV", vb.currentEVEstimate, C.muted, C.border],
-                null,
-                ["REVENUE GROWTH", vb.revenueGrowthComponent, C.accentB, C.accentB],
-                null,
-                ["COST EFFICIENCY", vb.costEfficiencyComponent, C.gold, C.gold],
-                null,
-                ["BRAND MULTIPLE", vb.brandMultipleExpansion, C.purple, C.purple],
-                null,
-                ["POTENTIAL EV", vb.potentialEVEstimate, C.accent, C.accent],
-              ].map((item,i)=> item===null ? (
-                <div key={i} style={{textAlign:"center",color:C.muted,fontSize:14}}>→</div>
-              ) : (
-                <div key={i} style={{
-                  background: item[3]===C.border ? C.surface : item[3]+"14",
-                  border:`1px solid ${item[3]}${item[3]===C.border?"":"44"}`,
-                  borderRadius:7,padding:"14px 10px",textAlign:"center"}}>
-                  <div style={{fontFamily:"DM Mono",fontSize:15,fontWeight:700,
-                    color:item[2],marginBottom:5,letterSpacing:-0.5}}>{item[1]||"—"}</div>
-                  <div style={{fontSize:8,color:C.muted,letterSpacing:1.5,fontFamily:"DM Mono",
-                    lineHeight:1.4}}>{item[0]}</div>
+          {/* Top row: EV flow */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 20px 1fr 20px 1fr 20px 1fr 20px 1fr",
+            alignItems:"center",gap:0,marginBottom:8}}>
+            {[
+              ["Current EV",       vb.currentEVEstimate,       C.muted,   C.border],
+              null,
+              ["Revenue Growth",   vb.revenueGrowthComponent,  C.accentB, C.accentB],
+              null,
+              ["Cost Efficiency",  vb.costEfficiencyComponent, C.gold,    C.gold],
+              null,
+              ["Brand Multiple",   vb.brandMultipleExpansion,  C.purple,  C.purple],
+              null,
+              ["Potential EV",     vb.potentialEVEstimate,     C.accent,  C.accent],
+            ].map((item,i)=> item===null ? (
+              <div key={i} style={{textAlign:"center",color:C.muted,fontSize:11}}>→</div>
+            ) : (
+              <div key={i} style={{
+                background: item[3]===C.border ? C.surface : item[3]+"12",
+                border:`1px solid ${item[3]}${item[3]===C.border?"":"33"}`,
+                borderRadius:6,padding:"10px 8px",textAlign:"center"}}>
+                <div style={{fontFamily:"DM Mono",fontSize:9,fontWeight:700,
+                  color:item[2],letterSpacing:1,marginBottom:5,textTransform:"uppercase"}}>
+                  {item[0]}
                 </div>
-              ))}
-            </div>
+                <div style={{fontFamily:"DM Mono",fontSize:13,fontWeight:600,
+                  color:item[2],lineHeight:1.2}}>{item[1]||"—"}</div>
+              </div>
+            ))}
           </div>
           {/* Bottom row: return metrics */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,marginBottom:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6,marginBottom:10}}>
             {[
-              ["Total Uplift",      vb.totalUpliftEstimate,       C.green,  C.greenDim],
-              ["Investment Reqd",   vb.totalInvestmentRequired,   C.gold,   C.goldDim],
-              ["Payback Period",    vb.paybackPeriod,             C.accentB,C.accentBDim],
-              ["Directional IRR",   vb.directionalIRR,            C.accent, C.accentDim],
-              ["Acquisition Guide", vb.acquisitionPriceGuidance,  C.purple, C.purpleDim],
+              ["Total Uplift",       vb.totalUpliftEstimate,      C.green,  C.greenDim],
+              ["Investment Reqd",    vb.totalInvestmentRequired,  C.gold,   C.goldDim],
+              ["Payback Period",     vb.paybackPeriod,            C.accentB,C.accentBDim],
+              ["Directional IRR",    vb.directionalIRR,           C.accent, C.accentDim],
+              ["Acquisition Guide",  vb.acquisitionPriceGuidance, C.purple, C.purpleDim],
             ].map(([label,val,col,bg])=>(
-              <div key={label} style={{background:bg,border:`1px solid ${col}33`,
-                borderRadius:6,padding:"10px 12px",textAlign:"center"}}>
-                <div style={{fontFamily:"DM Mono",fontSize:16,fontWeight:700,
-                  color:col,marginBottom:4}}>{val||"—"}</div>
-                <div style={{fontSize:9,color:C.muted,letterSpacing:1,fontFamily:"DM Mono"}}>{label.toUpperCase()}</div>
+              <div key={label} style={{background:bg,border:`1px solid ${col}30`,
+                borderRadius:6,padding:"9px 10px",textAlign:"center"}}>
+                <div style={{fontFamily:"DM Mono",fontSize:9,fontWeight:700,
+                  color:col,letterSpacing:1,marginBottom:5,textTransform:"uppercase"}}>{label}</div>
+                <div style={{fontFamily:"DM Mono",fontSize:13,fontWeight:600,
+                  color:col,lineHeight:1.2}}>{val||"—"}</div>
               </div>
             ))}
           </div>
