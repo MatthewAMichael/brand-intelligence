@@ -434,7 +434,7 @@ export default function App() {
             CUSTOMER STRATEGY &amp; VALUE CREATION INTELLIGENCE
           </div>
           <div style={{fontWeight:600,fontSize:14,color:C.textHi,letterSpacing:-0.3}}>
-            Investment Opportunity Scanner
+            Enterprise Value Gap Assessment
           </div>
         </div>
         <nav style={{marginLeft:24,display:"flex",gap:2,flexWrap:"wrap"}}>
@@ -632,6 +632,17 @@ function AnalysisView({r,weights,weightedScore,watchlist,setWatchlist,compareIds
         </div>
       </div>
 
+      {/* INVESTMENT THESIS — pinned below summary */}
+      {r.investmentThesis&&(
+        <div style={{background:`linear-gradient(135deg,${C.accentDim},${C.surfaceHi})`,
+          border:`1px solid ${C.accent}44`,borderRadius:8,padding:"14px 18px",marginBottom:18}}>
+          <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+            <SignalBadge signal={sig}/>
+            <p style={{fontSize:13,lineHeight:1.85,color:C.textHi,flex:1}}>{r.investmentThesis}</p>
+          </div>
+        </div>
+      )}
+
       {/* SCORE TRIO */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:18}}>
         {[
@@ -655,154 +666,62 @@ function AnalysisView({r,weights,weightedScore,watchlist,setWatchlist,compareIds
       {vb.currentEVEstimate&&(
         <>
           <Divider title="VALUE BRIDGE — ENTERPRISE VALUE OPPORTUNITY"/>
-          <div style={{background:`linear-gradient(135deg,${C.accentDim},${C.surfaceHi})`,
-            border:`1px solid ${C.accent}33`,borderRadius:8,padding:"16px 20px",marginBottom:18}}>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr) 2fr",gap:12,marginBottom:14}}>
+          {/* Top row: EV flow bar */}
+          <div style={{marginBottom:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 24px 1fr 24px 1fr 24px 1fr 24px 1fr",
+              alignItems:"center",gap:0,marginBottom:10}}>
               {[
-                ["Current EV",vb.currentEVEstimate,C.muted],
-                ["Revenue Growth",vb.revenueGrowthComponent,C.accentB],
-                ["Cost Efficiency",vb.costEfficiencyComponent,C.gold],
-                ["Brand Multiple",vb.brandMultipleExpansion,C.purple],
-                ["Potential EV",vb.potentialEVEstimate,C.accent],
-              ].map(([label,val,col])=>(
-                <div key={label} style={{textAlign:"center",
-                  background:col===C.accent?C.accentDim+"88":"transparent",
-                  borderRadius:5,padding:"8px 4px",
-                  border:col===C.accent?`1px solid ${C.accent}33`:"none"}}>
-                  <div style={{fontFamily:"DM Mono",fontSize:col===C.accent?16:14,
-                    fontWeight:700,color:col,marginBottom:3}}>{val||"—"}</div>
-                  <div style={{fontSize:8,color:C.muted,letterSpacing:1,fontFamily:"DM Mono"}}>
-                    {label.toUpperCase()}
-                  </div>
+                ["CURRENT EV", vb.currentEVEstimate, C.muted, C.border],
+                null,
+                ["REVENUE GROWTH", vb.revenueGrowthComponent, C.accentB, C.accentB],
+                null,
+                ["COST EFFICIENCY", vb.costEfficiencyComponent, C.gold, C.gold],
+                null,
+                ["BRAND MULTIPLE", vb.brandMultipleExpansion, C.purple, C.purple],
+                null,
+                ["POTENTIAL EV", vb.potentialEVEstimate, C.accent, C.accent],
+              ].map((item,i)=> item===null ? (
+                <div key={i} style={{textAlign:"center",color:C.muted,fontSize:14}}>→</div>
+              ) : (
+                <div key={i} style={{
+                  background: item[3]===C.border ? C.surface : item[3]+"14",
+                  border:`1px solid ${item[3]}${item[3]===C.border?"":"44"}`,
+                  borderRadius:7,padding:"14px 10px",textAlign:"center"}}>
+                  <div style={{fontFamily:"DM Mono",fontSize:15,fontWeight:700,
+                    color:item[2],marginBottom:5,letterSpacing:-0.5}}>{item[1]||"—"}</div>
+                  <div style={{fontSize:8,color:C.muted,letterSpacing:1.5,fontFamily:"DM Mono",
+                    lineHeight:1.4}}>{item[0]}</div>
                 </div>
               ))}
             </div>
-            <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-              {[
-                ["Total Uplift",vb.totalUpliftEstimate,C.green],
-                ["Investment Required",vb.totalInvestmentRequired,C.gold],
-                ["Payback Period",vb.paybackPeriod,C.accentB],
-                ["Directional IRR",vb.directionalIRR,C.accent],
-                ["Acquisition Guidance",vb.acquisitionPriceGuidance,C.purple],
-              ].map(([label,val,col])=>(
-                <div key={label} style={{background:C.surface,border:`1px solid ${C.border}`,
-                  borderRadius:5,padding:"7px 12px",flex:1,minWidth:110}}>
-                  <div style={{fontFamily:"DM Mono",fontSize:13,fontWeight:600,color:col}}>{val||"—"}</div>
-                  <div style={{fontSize:9,color:C.muted,letterSpacing:0.8,marginTop:2}}>{label}</div>
-                </div>
-              ))}
-            </div>
-            {vb.valuationRationale&&(
-              <p style={{marginTop:12,fontSize:12,color:C.text,lineHeight:1.7,
-                borderTop:`1px solid ${C.border}`,paddingTop:10}}>
-                {vb.valuationRationale}
-              </p>
-            )}
           </div>
+          {/* Bottom row: return metrics */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,marginBottom:10}}>
+            {[
+              ["Total Uplift",      vb.totalUpliftEstimate,       C.green,  C.greenDim],
+              ["Investment Reqd",   vb.totalInvestmentRequired,   C.gold,   C.goldDim],
+              ["Payback Period",    vb.paybackPeriod,             C.accentB,C.accentBDim],
+              ["Directional IRR",   vb.directionalIRR,            C.accent, C.accentDim],
+              ["Acquisition Guide", vb.acquisitionPriceGuidance,  C.purple, C.purpleDim],
+            ].map(([label,val,col,bg])=>(
+              <div key={label} style={{background:bg,border:`1px solid ${col}33`,
+                borderRadius:6,padding:"10px 12px",textAlign:"center"}}>
+                <div style={{fontFamily:"DM Mono",fontSize:16,fontWeight:700,
+                  color:col,marginBottom:4}}>{val||"—"}</div>
+                <div style={{fontSize:9,color:C.muted,letterSpacing:1,fontFamily:"DM Mono"}}>{label.toUpperCase()}</div>
+              </div>
+            ))}
+          </div>
+          {vb.valuationRationale&&(
+            <div style={{background:C.surface,border:`1px solid ${C.border}`,
+              borderRadius:6,padding:"10px 14px",marginBottom:18}}>
+              <p style={{fontSize:12,color:C.text,lineHeight:1.75}}>{vb.valuationRationale}</p>
+            </div>
+          )}
         </>
       )}
 
-      {/* CUSTOMER PROFILE */}
-      {cp.audienceInsight&&(
-        <>
-          <Divider title="CUSTOMER PROFILE & AUDIENCE INTELLIGENCE"/>
-          <div style={{background:C.surface,border:`1px solid ${C.border}`,
-            borderRadius:8,padding:"14px 18px",marginBottom:18}}>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:12}}>
-              {[
-                ["Customer Base",cp.estimatedCustomerBase,C.accentB],
-                ["NPS Estimate",cp.npsEstimate,sc(parseInt(cp.npsEstimate)||50)],
-                ["Satisfaction",cp.satisfactionLevel,cp.satisfactionLevel==="HIGH"?C.green:cp.satisfactionLevel==="MEDIUM"?C.gold:C.red],
-                ["Loyalty",cp.loyaltyStrength,cp.loyaltyStrength==="STRONG"?C.green:cp.loyaltyStrength==="MODERATE"?C.gold:C.red],
-                ["Community",cp.communityEngagement,cp.communityEngagement==="HIGH"?C.green:cp.communityEngagement==="MEDIUM"?C.gold:C.red],
-              ].map(([label,val,col])=>(
-                <div key={label} style={{textAlign:"center",padding:"8px 4px"}}>
-                  <div style={{fontFamily:"DM Mono",fontSize:13,fontWeight:600,color:col,marginBottom:3}}>{val||"—"}</div>
-                  <div style={{fontSize:9,color:C.muted,letterSpacing:0.8}}>{label}</div>
-                </div>
-              ))}
-            </div>
-            <p style={{fontSize:12,color:C.text,lineHeight:1.7,
-              borderTop:`1px solid ${C.border}`,paddingTop:10}}>{cp.audienceInsight}</p>
-          </div>
-        </>
-      )}
-
-      {/* DIMENSIONS + RADAR */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 205px",gap:14,marginBottom:18}}>
-        <div>
-          <Divider title="DATA SIGNAL ASSESSMENT"/>
-          <div style={{display:"flex",flexDirection:"column",gap:7}}>
-            {DIMS.map(dim=>{
-              const d=r.dimensions[dim.id]||{};
-              return (
-                <div key={dim.id} style={{background:C.surface,border:`1px solid ${C.border}`,
-                  borderRadius:6,padding:"10px 13px"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:6}}>
-                    <span style={{color:dim.color,fontSize:13}}>{dim.icon}</span>
-                    <span style={{fontSize:9,fontFamily:"DM Mono",color:C.muted,letterSpacing:1.5,flex:1}}>
-                      {dim.label.toUpperCase()}
-                    </span>
-                    {d.source&&<span style={{fontSize:9,color:C.muted,fontStyle:"italic"}}>{d.source}</span>}
-                    <TrendArrow trend={d.trend||"FLAT"}/>
-                    <span style={{fontFamily:"DM Mono",fontSize:9,color:C.muted,marginLeft:4}}>
-                      w:{weights[dim.id]}%
-                    </span>
-                    <span style={{fontFamily:"DM Mono",fontSize:12,fontWeight:600,
-                      color:sc(d.score||0),marginLeft:7}}>{d.score||0}</span>
-                  </div>
-                  <Meter value={d.score||0} color={sc(d.score||0)}/>
-                  {d.signal&&<p style={{marginTop:4,fontSize:9,color:C.muted,fontFamily:"DM Mono"}}>
-                    ↳ {d.signal}</p>}
-                  <p style={{marginTop:4,fontSize:11,color:C.text,lineHeight:1.6}}>{d.insight}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,
-            padding:12,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
-            <div style={{fontSize:8,fontFamily:"DM Mono",color:C.muted,letterSpacing:2}}>SIGNAL RADAR</div>
-            <RadarChart data={r.dimensions} weights={weights} size={178}/>
-          </div>
-          {(r.scoreHistory||[]).length>1&&(
-            <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:12}}>
-              <div style={{fontSize:8,fontFamily:"DM Mono",color:C.muted,letterSpacing:2,marginBottom:8}}>
-                SCORE HISTORY
-              </div>
-              <Spark values={r.scoreHistory} color={inv(sig)} width={176} height={36}/>
-              <div style={{display:"flex",justifyContent:"space-between",marginTop:5}}>
-                <span style={{fontSize:8,fontFamily:"DM Mono",color:C.muted}}>OLDEST</span>
-                <span style={{fontSize:8,fontFamily:"DM Mono",color:inv(sig)}}>NOW: {ws}</span>
-              </div>
-            </div>
-          )}
-          {/* peer benchmarks */}
-          {(r.peerBenchmarks||[]).length>0&&(
-            <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:12}}>
-              <div style={{fontSize:8,fontFamily:"DM Mono",color:C.muted,letterSpacing:2,marginBottom:9}}>
-                PEER BENCHMARKS
-              </div>
-              {[{company:r.company,score:ws,signal:sig,subject:true},
-                ...(r.peerBenchmarks||[])].sort((a,b)=>b.score-a.score).map((p,i)=>(
-                <div key={i} style={{marginBottom:7}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
-                    <span style={{fontSize:9,color:p.subject?C.textHi:C.text,
-                      fontWeight:p.subject?600:400}}>{p.company}</span>
-                    <span style={{fontSize:9,fontFamily:"DM Mono",
-                      color:inv(p.signal||"WATCH")}}>{p.score}</span>
-                  </div>
-                  <Meter value={p.score} color={p.subject?C.accent:sc(p.score)} height={3}/>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* CAPABILITY GAPS */}
+      {/* CAPABILITY GAPS — moved above customer profile */}
       {(r.capabilityGaps||[]).length>0&&(
         <>
           <Divider title="CAPABILITY GAPS & INTERVENTION OPPORTUNITIES"/>
@@ -860,6 +779,128 @@ function AnalysisView({r,weights,weightedScore,watchlist,setWatchlist,compareIds
         </>
       )}
 
+      {/* CUSTOMER PROFILE */}
+      {cp.audienceInsight&&(
+        <>
+          <Divider title="CUSTOMER PROFILE & AUDIENCE INTELLIGENCE"/>
+          <div style={{background:C.surface,border:`1px solid ${C.border}`,
+            borderRadius:8,padding:"14px 18px",marginBottom:18}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:12}}>
+              {[
+                ["Customer Base",cp.estimatedCustomerBase,C.accentB],
+                ["NPS Estimate",cp.npsEstimate,sc(parseInt(cp.npsEstimate)||50)],
+                ["Satisfaction",cp.satisfactionLevel,cp.satisfactionLevel==="HIGH"?C.green:cp.satisfactionLevel==="MEDIUM"?C.gold:C.red],
+                ["Loyalty",cp.loyaltyStrength,cp.loyaltyStrength==="STRONG"?C.green:cp.loyaltyStrength==="MODERATE"?C.gold:C.red],
+                ["Community",cp.communityEngagement,cp.communityEngagement==="HIGH"?C.green:cp.communityEngagement==="MEDIUM"?C.gold:C.red],
+              ].map(([label,val,col])=>(
+                <div key={label} style={{textAlign:"center",padding:"8px 4px"}}>
+                  <div style={{fontFamily:"DM Mono",fontSize:13,fontWeight:600,color:col,marginBottom:3}}>{val||"—"}</div>
+                  <div style={{fontSize:9,color:C.muted,letterSpacing:0.8}}>{label}</div>
+                </div>
+              ))}
+            </div>
+            <p style={{fontSize:12,color:C.text,lineHeight:1.7,
+              borderTop:`1px solid ${C.border}`,paddingTop:10}}>{cp.audienceInsight}</p>
+          </div>
+        </>
+      )}
+
+      {/* DIMENSIONS + RADAR */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 250px",gap:14,marginBottom:18}}>
+        <div>
+          <Divider title="DATA SIGNAL ASSESSMENT"/>
+          <div style={{display:"flex",flexDirection:"column",gap:7}}>
+            {DIMS.map(dim=>{
+              const d=r.dimensions[dim.id]||{};
+              return (
+                <div key={dim.id} style={{background:C.surface,border:`1px solid ${C.border}`,
+                  borderRadius:6,padding:"10px 13px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:6}}>
+                    <span style={{color:dim.color,fontSize:13}}>{dim.icon}</span>
+                    <span style={{fontSize:9,fontFamily:"DM Mono",color:C.muted,letterSpacing:1.5,flex:1}}>
+                      {dim.label.toUpperCase()}
+                    </span>
+                    {d.source&&<span style={{fontSize:9,color:C.muted,fontStyle:"italic"}}>{d.source}</span>}
+                    <TrendArrow trend={d.trend||"FLAT"}/>
+                    <span style={{fontFamily:"DM Mono",fontSize:9,color:C.muted,marginLeft:4}}>
+                      w:{weights[dim.id]}%
+                    </span>
+                    <span style={{fontFamily:"DM Mono",fontSize:12,fontWeight:600,
+                      color:sc(d.score||0),marginLeft:7}}>{d.score||0}</span>
+                  </div>
+                  <Meter value={d.score||0} color={sc(d.score||0)}/>
+                  {d.signal&&<p style={{marginTop:4,fontSize:9,color:C.muted,fontFamily:"DM Mono"}}>
+                    ↳ {d.signal}</p>}
+                  <p style={{marginTop:4,fontSize:11,color:C.text,lineHeight:1.6}}>{d.insight}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <div style={{background:C.surface,border:`1px solid ${C.accent}33`,borderRadius:8,
+            padding:16,display:"flex",flexDirection:"column",alignItems:"center",gap:10}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,alignSelf:"stretch"}}>
+              <div style={{fontSize:8,fontFamily:"DM Mono",color:C.accent,letterSpacing:2,flex:1}}>
+                SIGNAL RADAR
+              </div>
+              <div style={{fontSize:9,fontFamily:"DM Mono",color:C.muted}}>WEIGHTED</div>
+            </div>
+            <RadarChart data={r.dimensions} weights={weights} size={210}/>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,alignSelf:"stretch"}}>
+              {DIMS.map(dim=>(
+                <div key={dim.id} style={{display:"flex",alignItems:"center",gap:5}}>
+                  <div style={{width:6,height:6,borderRadius:"50%",background:dim.color,flexShrink:0}}/>
+                  <span style={{fontSize:8,color:C.muted,fontFamily:"DM Mono",
+                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                    {dim.label.split(" ")[0]}
+                  </span>
+                  <span style={{fontSize:8,color:sc(r.dimensions[dim.id]?.score||0),
+                    fontFamily:"DM Mono",marginLeft:"auto"}}>
+                    {r.dimensions[dim.id]?.score||0}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {(r.scoreHistory||[]).length>1&&(
+            <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:12}}>
+              <div style={{fontSize:8,fontFamily:"DM Mono",color:C.muted,letterSpacing:2,marginBottom:8}}>
+                SCORE HISTORY
+              </div>
+              <Spark values={r.scoreHistory} color={inv(sig)} width={176} height={36}/>
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:5}}>
+                <span style={{fontSize:8,fontFamily:"DM Mono",color:C.muted}}>OLDEST</span>
+                <span style={{fontSize:8,fontFamily:"DM Mono",color:inv(sig)}}>NOW: {ws}</span>
+              </div>
+            </div>
+          )}
+          {/* peer benchmarks */}
+          {(r.peerBenchmarks||[]).length>0&&(
+            <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:12}}>
+              <div style={{fontSize:8,fontFamily:"DM Mono",color:C.muted,letterSpacing:2,marginBottom:9}}>
+                PEER BENCHMARKS
+              </div>
+              {[{company:r.company,score:ws,signal:sig,subject:true},
+                ...(r.peerBenchmarks||[])].sort((a,b)=>b.score-a.score).map((p,i)=>(
+                <div key={i} style={{marginBottom:7}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                    <span style={{fontSize:9,color:p.subject?C.textHi:C.text,
+                      fontWeight:p.subject?600:400}}>{p.company}</span>
+                    <span style={{fontSize:9,fontFamily:"DM Mono",
+                      color:inv(p.signal||"WATCH")}}>{p.score}</span>
+                  </div>
+                  <Meter value={p.score} color={p.subject?C.accent:sc(p.score)} height={3}/>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+
+
       {/* PRIORITY ROADMAP */}
       {(r.priorityRoadmap||[]).length>0&&(
         <>
@@ -914,16 +955,7 @@ function AnalysisView({r,weights,weightedScore,watchlist,setWatchlist,compareIds
         ))}
       </div>
 
-      {/* INVESTMENT THESIS */}
-      <Divider title="INVESTMENT THESIS"/>
-      <div style={{background:`linear-gradient(135deg,${C.accentDim},${C.surfaceHi})`,
-        border:`1px solid ${C.accent}44`,borderRadius:8,padding:"15px 18px",marginBottom:8}}>
-        <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
-          <SignalBadge signal={sig}/>
-          <p style={{fontSize:13,lineHeight:1.85,color:C.textHi,flex:1}}>{r.investmentThesis}</p>
-        </div>
-      </div>
-      <p style={{fontSize:8,color:C.muted,fontFamily:"DM Mono",letterSpacing:1}}>
+      <p style={{fontSize:8,color:C.muted,fontFamily:"DM Mono",letterSpacing:1,marginTop:8}}>
         ANALYSED {fmt(r.analysedAt)} · WEIGHTED SCORE {ws} · RAW SCORE {r.overallScore} · {sig}
       </p>
     </div>
