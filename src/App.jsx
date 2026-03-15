@@ -149,7 +149,8 @@ Schema:
 
 Score meanings — IMPORTANT: scores reflect how well the company CURRENTLY realises value. LOW score = large gap = HIGH opportunity for a PE investor. HIGH score = already well-realised = less upside.
 Be specific, financially grounded, and reference real industry dynamics. Use real benchmarks where known.
-CRITICAL: Return only the JSON object. Nothing else.`;
+CRITICAL: Return only the JSON object. Nothing else.
+IMPORTANT: Be concise in all string fields — 1-2 sentences maximum per insight/description. Limit capabilityGaps to 4 items maximum. Limit catalysts and risks to 4 items each. Limit peerBenchmarks to 3 items. Limit priorityRoadmap to 3 phases. Keep all strings short — this is a data object not an essay.`;
 
 // ─── API ───────────────────────────────────────────────────────────────────
 async function callClaude(system, user, onDone, onError) {
@@ -157,7 +158,7 @@ async function callClaude(system, user, onDone, onError) {
     const r = await fetch("/api/chat", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ model:MODEL, max_tokens:5000, system, messages:[{role:"user",content:user}] })
+      body: JSON.stringify({ model:MODEL, max_tokens:8000, system, messages:[{role:"user",content:user}] })
     });
     const d = await r.json();
     if(!r.ok){ onError(`API error ${r.status}: ${d?.error?.message||JSON.stringify(d)}`); return; }
