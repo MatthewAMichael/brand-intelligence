@@ -1,4 +1,4 @@
-// api/chat.js — Vercel Pro, streaming response to avoid timeout
+// api/chat.js — Vercel Pro proxy, simple and reliable
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -16,12 +16,8 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: "Invalid JSON: " + e.message });
   }
 
-  // Cap tokens conservatively
-  body.max_tokens = Math.min(body.max_tokens || 4000, 4000);
-
+  // No token cap — let the app control this
   try {
-    // Call Anthropic WITHOUT streaming — but we pipe response immediately
-    // so Vercel sees activity and doesn't time out
     const upstream = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -29,26 +25,15 @@ module.exports = async function handler(req, res) {
         "anthropic-version": "2023-06-01",
         "x-api-key": process.env.ANTHROPIC_API_KEY,
       },
-      body: JSON.stringify({ ...body, stream: false }),
+      body: JSON.stringify(body),
     });
 
-    // Stream the response body back to the client as it arrives
+    // Read the complete response text then send it all at once
+    const text = await upstream.text();
     res.setHeader("Content-Type", "application/json");
-    res.setHeader("Transfer-Encoding", "chunked");
-    res.status(upstream.status);
-
-    // Pipe chunks through immediately
-    const reader = upstream.body.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      res.write(value);
-    }
-    res.end();
+    res.status(upstream.status).send(text);
 
   } catch(error) {
-    if (!res.headersSent) {
-      res.status(500).json({ error: "Proxy error: " + error.message });
-    }
+    res.status(500).json({ error: "Proxy error: " + error.message });
   }
 };
