@@ -163,22 +163,15 @@ Score meanings — IMPORTANT: scores reflect how well the company CURRENTLY real
 Be specific, financially grounded, and reference real industry dynamics. Use real benchmarks where known.
 CRITICAL: Return only the JSON object. Nothing else.
 IMPORTANT: All financial figures must include the correct currency symbol. Use AUD (e.g. "AUD 2.4bn") for Australian companies, USD (e.g. "USD 1.2bn") for US companies, GBP (e.g. "£840m") for UK companies, and the appropriate local currency for all others. Never output a bare number without a currency symbol for any financial field.
-CRITICAL LENGTH LIMIT: Your entire JSON response must be under 3000 tokens. Be extremely concise.
-- executiveSummary: 2 sentences only.
-- capabilityGaps: 3 gaps only. currentState/potentialState: 1 short sentence each. interventions: 3 items max, under 10 words each. kpiTargets: 2 metrics only. benchmarkReference: 1 line only.
-- All dimension insights: 1 sentence each. All signals: 5 words max.
-- catalysts: 3 items. risks: 3 items. peerBenchmarks: 2 items. priorityRoadmap: 2 phases, 2 initiatives each.
-- valueBridgeModel.valuationRationale: 1 sentence only.
-- investmentThesis: 2 sentences only.
-- customerProfile.audienceInsight: 1 sentence only.
-- No padding, no repetition. Every character counts.`;
+IMPORTANT: For capabilityGaps, be thorough — this is the most important section. Provide 4-5 gaps with full detail including 3-5 specific interventions each, detailed currentState and potentialState (2-3 sentences each), currency-denominated financial estimates, specific KPI targets, and a benchmark reference.
+For all other string fields keep to 1-2 sentences. Limit catalysts and risks to 4 items each. Limit peerBenchmarks to 3 items. Limit priorityRoadmap to 3 phases with 3 initiatives each.`;
 
 // ─── API ───────────────────────────────────────────────────────────────────
 // Using XMLHttpRequest instead of fetch for cross-browser reliability (Safari)
 function callClaude(system, user, onDone, onError) {
   const payload = JSON.stringify({
     model: MODEL,
-    max_tokens: 3000,
+    max_tokens: 5000,
     system,
     messages: [{ role:"user", content:user }]
   });
