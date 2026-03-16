@@ -166,21 +166,46 @@ IMPORTANT: All financial figures must include the correct currency symbol. Use A
 IMPORTANT: For capabilityGaps, be thorough — this is the most important section. Provide 4-5 gaps with full detail in all fields including 3-5 interventions each. For all other string fields keep to 1-2 sentences. Limit catalysts and risks to 4 items each. Limit peerBenchmarks to 3 items. Limit priorityRoadmap to 3 phases.`;
 
 // ─── API ───────────────────────────────────────────────────────────────────
-async function callClaude(system, user, onDone, onError) {
-  try {
-    const r = await fetch("/api/chat", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ model:MODEL, max_tokens:8000, system, messages:[{role:"user",content:user}] })
-    });
-    const d = await r.json();
-    if(!r.ok){ onError(`API error ${r.status}: ${d?.error?.message||JSON.stringify(d)}`); return; }
-    const t = d.content?.map(b=>b.text||"").join("")||"";
-    if(!t){ onError("Empty response"); return; }
-    const s=t.indexOf("{"), e=t.lastIndexOf("}");
-    if(s===-1||e===-1){ onError("No JSON in response: "+t.slice(0,200)); return; }
-    onDone(t.slice(s,e+1));
-  } catch(e){ onError("Network error: "+e.message); }
+// Using XMLHttpRequest instead of fetch for cross-browser reliability (Safari)
+function callClaude(system, user, onDone, onError) {
+  const payload = JSON.stringify({
+    model: MODEL,
+    max_tokens: 8000,
+    system,
+    messages: [{ role:"user", content:user }]
+  });
+
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", "/api/chat", true);
+  xhr.setRequestHeader("Content-Type", "application/json");
+  xhr.timeout = 120000; // 2 minute timeout for long analyses
+
+  xhr.onload = function() {
+    try {
+      const d = JSON.parse(xhr.responseText);
+      if (xhr.status !== 200) {
+        onError("API error " + xhr.status + ": " + (d?.error?.message || xhr.responseText.slice(0,200)));
+        return;
+      }
+      const t = (d.content || []).map(b => b.text || "").join("");
+      if (!t) { onError("Empty response from API"); return; }
+      const s = t.indexOf("{"), e = t.lastIndexOf("}");
+      if (s === -1 || e === -1) { onError("No JSON in response: " + t.slice(0,200)); return; }
+      onDone(t.slice(s, e + 1));
+    } catch(e) {
+      onError("Response parse error: " + e.message + " — " + xhr.responseText.slice(0,200));
+    }
+  };
+
+  xhr.onerror = function() {
+    onError("Network error — could not reach the server. Check your connection and try again.");
+  };
+
+  xhr.ontimeout = function() {
+    onError("Request timed out — the analysis took too long. Please try again.");
+  };
+
+  xhr.send(payload);
 }
 
 // ─── Storage ───────────────────────────────────────────────────────────────
