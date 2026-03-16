@@ -82,17 +82,15 @@ const FEED_EVENTS = [
 ];
 
 // ─── SYSTEM PROMPT ─────────────────────────────────────────────────────────
-const SYSTEM = `You are a senior investment analyst at a private equity firm specialising in customer strategy and brand-led value creation. Your role is identical to analysts at firms like Blackstone who assess whether an organisation's customer base, brand equity, and commercial capabilities are under-realised relative to what a transformation programme could unlock.
+const SYSTEM = `You are a senior investment analyst at a private equity firm specialising in customer strategy and brand-led value creation. Assess whether the organisation's customer base, brand equity, and commercial capabilities are under-realised relative to what a transformation programme could unlock.
 
-You think like a PE investor screening an acquisition target: what is the gap between current enterprise value and potential value? What is the right entry price? What investment is required? What is the expected return?
+Think like a PE investor: what is the gap between current and potential enterprise value? What is the right entry price? What investment is required? What is the return?
 
-ORGANISATION IDENTIFICATION: Before analysing, determine the organisation's country of registration and headquarters. For Australian companies, reference ABN Lookup (abr.business.gov.au) and ASIC Connect records to confirm legal entity, ABN, ACN, and registered address. For US companies reference SEC EDGAR. For UK companies reference Companies House. Use this to confirm the correct currency, legal structure, and corporate narrative.
+ORGANISATION IDENTIFICATION: Determine country of registration and headquarters first. For Australian companies reference ABN Lookup. Use this to confirm currency (AUD for Australia, USD for US, GBP for UK).
 
-SOCIAL & COMMUNITY SIGNALS: Your analysis must incorporate signals from social media platforms including Twitter/X (brand mentions, sentiment, engagement trends), Facebook (community size, engagement, brand page activity), Instagram (visual brand equity, follower engagement, UGC), Reddit (organic community discussion, brand sentiment in relevant subreddits, unfiltered customer voice). These social signals are critical inputs for the sentiment, social, and brand dimensions.
+SOCIAL SIGNALS: Draw on Twitter/X, Facebook, Instagram, Reddit, Trustpilot, Google Reviews, App Store ratings for sentiment and brand dimensions.
 
-Your analysis draws on: Twitter/X sentiment and mentions, Facebook community engagement, Instagram brand equity signals, Reddit organic discussion, customer reviews (Trustpilot, Google, App Store), NPS data, brand equity tracking (BrandZ, YouGov), annual reports, corporate narratives, ASX/NYSE/LSE filings, analyst reports, industry benchmarks, digital performance (SimilarWeb, App Annie), and customer satisfaction data.
-
-Return ONLY a valid JSON object. No markdown, no code fences, no commentary. Start with { end with }.
+Return ONLY a valid JSON object. No markdown, no code fences. Start with { end with }.
 
 Schema:
 {
@@ -104,7 +102,7 @@ Schema:
   "investmentSignal": "BUY"|"WATCH"|"PASS",
   "confidenceLevel": "HIGH"|"MEDIUM"|"LOW",
   "overallScore": integer 0-100,
-  "executiveSummary": string (3-4 sentences — what is the gap, why does it exist, what could unlock it),
+  "executiveSummary": string,
   "customerStrategyScore": integer 0-100,
   "brandEquityScore": integer 0-100,
   "commercialScore": integer 0-100,
@@ -128,15 +126,15 @@ Schema:
     {
       "domain": string,
       "severity": "CRITICAL"|"SIGNIFICANT"|"MODERATE",
-      "currentState": string (2-3 sentences describing the specific problem with evidence),
-      "potentialState": string (2-3 sentences describing what good looks like with specific outcomes),
-      "interventions": [string] (3-5 specific actionable initiatives to close the gap),
-      "revenueUplift": string (currency-denominated estimate e.g. "AUD 45-80m p.a."),
-      "costReduction": string (currency-denominated estimate e.g. "AUD 12-20m p.a."),
-      "investmentRequired": string (currency-denominated estimate e.g. "AUD 15-25m over 2 years"),
+      "currentState": string,
+      "potentialState": string,
+      "interventions": [string],
+      "revenueUplift": string,
+      "costReduction": string,
+      "investmentRequired": string,
       "timeHorizon": "0-12 months"|"1-2 years"|"2-4 years",
-      "kpiTargets": string (3-4 specific measurable KPI targets e.g. "NPS +20pts, conversion +2%, churn -15%"),
-      "benchmarkReference": string (reference to a comparable company or industry benchmark that achieved similar outcomes)
+      "kpiTargets": string,
+      "benchmarkReference": string
     }
   ],
   "valueBridgeModel": {
@@ -159,12 +157,15 @@ Schema:
   "priorityRoadmap": [{"phase":string,"horizon":string,"initiatives":[string],"expectedValue":string}]
 }
 
-Score meanings — IMPORTANT: scores reflect how well the company CURRENTLY realises value. LOW score = large gap = HIGH opportunity for a PE investor. HIGH score = already well-realised = less upside.
-Be specific, financially grounded, and reference real industry dynamics. Use real benchmarks where known.
-CRITICAL: Return only the JSON object. Nothing else.
-IMPORTANT: All financial figures must include the correct currency symbol. Use AUD (e.g. "AUD 2.4bn") for Australian companies, USD (e.g. "USD 1.2bn") for US companies, GBP (e.g. "£840m") for UK companies, and the appropriate local currency for all others. Never output a bare number without a currency symbol for any financial field.
-IMPORTANT: For capabilityGaps, be thorough — this is the most important section. Provide 4-5 gaps with full detail including 3-5 specific interventions each, detailed currentState and potentialState (2-3 sentences each), currency-denominated financial estimates, specific KPI targets, and a benchmark reference.
-For all other string fields keep to 1-2 sentences. Limit catalysts and risks to 4 items each. Limit peerBenchmarks to 3 items. Limit priorityRoadmap to 3 phases with 3 initiatives each.`;
+SCORING: Low score = large gap = high opportunity. High score = already well-realised.
+CURRENCY: Always include currency symbol. AUD for Australian, USD for US, GBP for UK companies.
+
+DETAIL GUIDELINES:
+- executiveSummary: 3-4 sentences covering the gap, why it exists, and what could unlock it.
+- capabilityGaps: 4-5 items with full detail — 2-3 sentences each for currentState and potentialState, 3-5 specific interventions, currency-denominated financials, 3-4 KPI targets, and a benchmark reference.
+- investmentThesis: 3-4 sentences making the full PE case.
+- All other fields: 1-2 sentences. catalysts/risks: 4 items each. peerBenchmarks: 3 items. priorityRoadmap: 3 phases, 3 initiatives each.
+CRITICAL: Return only the JSON object. Nothing else.`
 
 // ─── API ───────────────────────────────────────────────────────────────────
 // fetch with streaming read — keeps connection alive during long responses
@@ -175,7 +176,7 @@ async function callClaude(system, user, onDone, onError) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 4000,
+        max_tokens: 8000,
         system,
         messages: [{ role: "user", content: user }]
       })
@@ -212,9 +213,22 @@ async function callClaude(system, user, onDone, onError) {
 
     const t = (d.content || []).map(b => b.text || "").join("");
     if (!t) { onError("Empty response from API"); return; }
-    const s = t.indexOf("{"), e = t.lastIndexOf("}");
-    if (s === -1 || e === -1) { onError("No JSON found: " + t.slice(0,200)); return; }
-    onDone(t.slice(s, e + 1));
+    const s = t.indexOf("{");
+    if (s === -1) { onError("No JSON found in response"); return; }
+    let jsonStr = t.slice(s);
+    // If truncated, attempt to close open structures
+    const e = jsonStr.lastIndexOf("}");
+    if (e === -1) {
+      onError("Response was cut off before completing. Please try again.");
+      return;
+    }
+    jsonStr = jsonStr.slice(0, e + 1);
+    // Validate it parses before handing off
+    try { JSON.parse(jsonStr); } catch(parseErr) {
+      onError("Incomplete response received — please try again. (" + parseErr.message + ")");
+      return;
+    }
+    onDone(jsonStr);
 
   } catch(e) {
     onError("Network error: " + e.message);
