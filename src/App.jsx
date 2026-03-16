@@ -160,11 +160,14 @@ Schema:
 SCORING: Low score = large gap = high opportunity. High score = already well-realised.
 CURRENCY: Always include currency symbol. AUD for Australian, USD for US, GBP for UK companies.
 
-DETAIL GUIDELINES:
-- executiveSummary: 3-4 sentences covering the gap, why it exists, and what could unlock it.
-- capabilityGaps: 4-5 items with full detail — 2-3 sentences each for currentState and potentialState, 3-5 specific interventions, currency-denominated financials, 3-4 KPI targets, and a benchmark reference.
-- investmentThesis: 3-4 sentences making the full PE case.
-- All other fields: 1-2 sentences. catalysts/risks: 4 items each. peerBenchmarks: 3 items. priorityRoadmap: 3 phases, 3 initiatives each.
+OUTPUT GUIDELINES — keep total response under 3000 tokens:
+- executiveSummary: 2 sentences.
+- capabilityGaps: 3 items. currentState/potentialState: 1 sentence each. interventions: 3 items max. kpiTargets: 2 metrics. benchmarkReference: 1 line.
+- investmentThesis: 2 sentences.
+- dimension insights: 1 sentence each. signals: 5 words max.
+- catalysts/risks: 3 items each, 1 sentence each.
+- peerBenchmarks: 2 items. priorityRoadmap: 2 phases, 2 initiatives each.
+- valuationRationale: 1 sentence. audienceInsight: 1 sentence.
 CRITICAL: Return only the JSON object. Nothing else.`
 
 // ─── API ───────────────────────────────────────────────────────────────────
@@ -176,7 +179,7 @@ async function callClaude(system, user, onDone, onError) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 8000,
+        max_tokens: 3500,
         system,
         messages: [{ role: "user", content: user }]
       })
@@ -206,10 +209,8 @@ async function callClaude(system, user, onDone, onError) {
         if (!data) continue;
         try {
           const evt = JSON.parse(data);
-          // Our proxy sends the final accumulated text as { fullText }
-          if (evt.fullText !== undefined) {
-            fullText = evt.fullText;
-          }
+          if (evt.error) { onError(evt.error); return; }
+          if (evt.fullText !== undefined) { fullText = evt.fullText; }
         } catch {}
       }
     }

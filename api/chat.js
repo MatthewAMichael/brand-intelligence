@@ -1,4 +1,4 @@
-// api/chat.js — true Anthropic streaming proxy
+// api/chat.js — Vercel Pro, streaming with abort controller
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -16,10 +16,17 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: "Invalid JSON: " + e.message });
   }
 
+  // Hard cap at 3500 tokens
+  body.max_tokens = Math.min(body.max_tokens || 3500, 3500);
+
+  // Abort if Anthropic takes longer than 50s (leaves 10s buffer for Vercel)
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 50000);
+
   try {
-    // Use Anthropic streaming so we never buffer a large response
     const upstream = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
+      signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
         "anthropic-version": "2023-06-01",
@@ -28,7 +35,6 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({ ...body, stream: true }),
     });
 
-    // Stream SSE events back to client, accumulating the full text
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
@@ -42,11 +48,9 @@ module.exports = async function handler(req, res) {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
       buffer = lines.pop() || "";
-
       for (const line of lines) {
         if (!line.startsWith("data: ")) continue;
         const data = line.slice(6).trim();
@@ -60,13 +64,20 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // Send the complete accumulated text as a single clean JSON response
+    clearTimeout(timer);
     res.write(`data: ${JSON.stringify({ fullText })}\n\n`);
     res.end();
 
   } catch(error) {
+    clearTimeout(timer);
+    const msg = error.name === "AbortError"
+      ? "Analysis took too long — please try again"
+      : "Proxy error: " + error.message;
     if (!res.headersSent) {
-      res.status(500).json({ error: "Proxy error: " + error.message });
+      res.status(500).json({ error: msg });
+    } else {
+      res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
+      res.end();
     }
   }
 };
