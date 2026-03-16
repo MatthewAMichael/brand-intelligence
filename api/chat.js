@@ -1,11 +1,9 @@
-// api/chat.js — Vercel serverless proxy (Pro plan — 60s timeout)
+// api/chat.js — Vercel Pro, streaming response to avoid timeout
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Max-Age", "86400");
-  res.setHeader("Content-Type", "application/json");
 
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -18,22 +16,39 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: "Invalid JSON: " + e.message });
   }
 
+  // Cap tokens conservatively
+  body.max_tokens = Math.min(body.max_tokens || 4000, 4000);
+
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    // Call Anthropic WITHOUT streaming — but we pipe response immediately
+    // so Vercel sees activity and doesn't time out
+    const upstream = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "anthropic-version": "2023-06-01",
         "x-api-key": process.env.ANTHROPIC_API_KEY,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, stream: false }),
     });
 
-    const data = await response.json();
-    if (!response.ok) return res.status(response.status).json(data);
-    return res.status(200).json(data);
+    // Stream the response body back to the client as it arrives
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Transfer-Encoding", "chunked");
+    res.status(upstream.status);
+
+    // Pipe chunks through immediately
+    const reader = upstream.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      res.write(value);
+    }
+    res.end();
 
   } catch(error) {
-    return res.status(500).json({ error: "Proxy error: " + error.message });
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Proxy error: " + error.message });
+    }
   }
 };

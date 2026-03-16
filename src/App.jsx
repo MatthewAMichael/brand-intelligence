@@ -167,52 +167,58 @@ IMPORTANT: For capabilityGaps, be thorough — this is the most important sectio
 For all other string fields keep to 1-2 sentences. Limit catalysts and risks to 4 items each. Limit peerBenchmarks to 3 items. Limit priorityRoadmap to 3 phases with 3 initiatives each.`;
 
 // ─── API ───────────────────────────────────────────────────────────────────
-// Using XMLHttpRequest instead of fetch for cross-browser reliability (Safari)
-function callClaude(system, user, onDone, onError) {
-  const payload = JSON.stringify({
-    model: MODEL,
-    max_tokens: 5000,
-    system,
-    messages: [{ role:"user", content:user }]
-  });
+// fetch with streaming read — keeps connection alive during long responses
+async function callClaude(system, user, onDone, onError) {
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 4000,
+        system,
+        messages: [{ role: "user", content: user }]
+      })
+    });
 
-  const xhr = new XMLHttpRequest();
-  xhr.open("POST", "/api/chat", true);
-  xhr.setRequestHeader("Content-Type", "application/json");
-  xhr.timeout = 120000; // 2 minute timeout for long analyses
+    // Read the full body via streaming so the connection stays warm
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let raw = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      raw += decoder.decode(value, { stream: true });
+    }
 
-  xhr.onload = function() {
-    // Catch Vercel timeout / infrastructure errors before trying to parse
-    if (xhr.responseText.includes("FUNCTION_INVOCATION_TIMEOUT") ||
-        xhr.responseText.includes("FUNCTION_INVOCATION_FAILED")) {
-      onError("The analysis timed out on the server. Try a shorter company name or try again in a moment.");
+    // Check for Vercel infrastructure errors
+    if (raw.includes("FUNCTION_INVOCATION_TIMEOUT") || raw.includes("FUNCTION_INVOCATION_FAILED")) {
+      onError("The server timed out. Please try again.");
       return;
     }
+
+    let d;
     try {
-      const d = JSON.parse(xhr.responseText);
-      if (xhr.status !== 200) {
-        onError("API error " + xhr.status + ": " + (d?.error?.message || xhr.responseText.slice(0,200)));
-        return;
-      }
-      const t = (d.content || []).map(b => b.text || "").join("");
-      if (!t) { onError("Empty response from API"); return; }
-      const s = t.indexOf("{"), e = t.lastIndexOf("}");
-      if (s === -1 || e === -1) { onError("No JSON in response: " + t.slice(0,200)); return; }
-      onDone(t.slice(s, e + 1));
+      d = JSON.parse(raw);
     } catch(e) {
-      onError("Response parse error: " + e.message + " — Raw: " + xhr.responseText.slice(0,150));
+      onError("Parse error: " + e.message + " — " + raw.slice(0, 150));
+      return;
     }
-  };
 
-  xhr.onerror = function() {
-    onError("Network error — could not reach the server. Check your connection and try again.");
-  };
+    if (!response.ok) {
+      onError("API error " + response.status + ": " + (d?.error?.message || raw.slice(0,200)));
+      return;
+    }
 
-  xhr.ontimeout = function() {
-    onError("Request timed out — the analysis took too long. Please try again.");
-  };
+    const t = (d.content || []).map(b => b.text || "").join("");
+    if (!t) { onError("Empty response from API"); return; }
+    const s = t.indexOf("{"), e = t.lastIndexOf("}");
+    if (s === -1 || e === -1) { onError("No JSON found: " + t.slice(0,200)); return; }
+    onDone(t.slice(s, e + 1));
 
-  xhr.send(payload);
+  } catch(e) {
+    onError("Network error: " + e.message);
+  }
 }
 
 // ─── Storage ───────────────────────────────────────────────────────────────
@@ -407,11 +413,11 @@ export default function App() {
     setAnalyses(prev=>prev.map(a=>({...a,weightedScore:weightedScore(a.dimensions)})));
   },[weights]);
 
-  const analyse=()=>{
+  const analyse=async ()=>{
     if(!query.trim()||loading) return;
     setLoading(true); setError("");
     const q=query.trim();
-    callClaude(SYSTEM,
+    await callClaude(SYSTEM,
       `Conduct a full customer strategy and brand-led value creation assessment for: "${q}". First identify the organisation's country of registration and headquarters to determine the correct currency and confirm entity details (ABN/ACN for Australian companies, SEC for US, Companies House for UK). Then analyse this organisation as a PE investor would — identifying the gap between current enterprise value and what could be unlocked through customer strategy transformation. Draw on all available signals including Twitter/X, Facebook, Instagram, Reddit and other social platforms to inform the sentiment, social and brand dimensions. Dimension weights: ${DIMS.map(d=>`${d.label}:${weights[d.id]}%`).join(", ")}. Return only the JSON.`,
       (text)=>{
         setLoading(false);
