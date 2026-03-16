@@ -1,12 +1,14 @@
 // api/chat.js — Vercel serverless proxy
-// Keeps the Anthropic API key secret on the server
 
 module.exports = async function handler(req, res) {
-  // CORS headers for browser requests
+  // Full CORS headers — required for Safari
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Max-Age", "86400");
+  res.setHeader("Content-Type", "application/json");
 
+  // Safari sends a preflight OPTIONS request first — must respond 200
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
@@ -19,6 +21,14 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: "ANTHROPIC_API_KEY not set on server" });
   }
 
+  // Parse body — Vercel may pass it as string or object depending on content-type
+  let body;
+  try {
+    body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+  } catch (e) {
+    return res.status(400).json({ error: "Invalid JSON body: " + e.message });
+  }
+
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -27,7 +37,7 @@ module.exports = async function handler(req, res) {
         "anthropic-version": "2023-06-01",
         "x-api-key": process.env.ANTHROPIC_API_KEY,
       },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify(body),
     });
 
     const data = await response.json();
