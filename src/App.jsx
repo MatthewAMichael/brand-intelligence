@@ -222,14 +222,15 @@ async function callClaude(system, user, onDone, onError) {
       return;
     }
 
-    // Extract JSON from the accumulated text
-    const s = fullText.indexOf("{");
-    const e = fullText.lastIndexOf("}");
+    // Strip markdown fences then extract JSON
+    const cleaned = fullText.replace(/```json/gi,"").replace(/```/g,"").trim();
+    const s = cleaned.indexOf("{");
+    const e = cleaned.lastIndexOf("}");
     if (s === -1 || e === -1) {
-      onError("No JSON found in response: " + fullText.slice(0, 200));
+      onError("No JSON found in response: " + cleaned.slice(0, 200));
       return;
     }
-    const jsonStr = fullText.slice(s, e + 1);
+    const jsonStr = cleaned.slice(s, e + 1);
 
     // Validate before handing off
     try {
