@@ -49,30 +49,36 @@ const DOMAINS = [
 // ─── live feed sources ─────────────────────────────────────────────────────
 const FEEDS = [
   { id:"brandwatch", label:"Brandwatch",   type:"Sentiment", icon:"◉", color:C.accent  },
+  { id:"twitter",    label:"Twitter / X",  type:"Social",    icon:"◈", color:C.accentB },
+  { id:"instagram",  label:"Instagram",    type:"Social",    icon:"◈", color:C.purple  },
+  { id:"reddit",     label:"Reddit",       type:"Community", icon:"◈", color:C.orange  },
+  { id:"facebook",   label:"Facebook",     type:"Social",    icon:"◈", color:C.accentB },
   { id:"trustpilot", label:"Trustpilot",   type:"Reviews",   icon:"◇", color:C.gold    },
   { id:"bloomberg",  label:"Bloomberg",    type:"Financial", icon:"▣", color:C.green   },
   { id:"factset",    label:"FactSet",      type:"Analyst",   icon:"◐", color:C.orange  },
   { id:"refinitiv",  label:"Refinitiv",    type:"Financial", icon:"▤", color:C.purple  },
   { id:"similarweb", label:"SimilarWeb",   type:"Digital",   icon:"◆", color:C.accentB },
+  { id:"abn",        label:"ABN Lookup",   type:"Registry",  icon:"▣", color:C.green   },
   { id:"kantar",     label:"Kantar BrandZ",type:"Brand",     icon:"◆", color:C.red     },
-  { id:"mintel",     label:"Mintel",       type:"Industry",  icon:"◈", color:C.accentB },
 ];
 
 const FEED_EVENTS = [
-  "Negative sentiment spike for ASOS — NPS down 14pts in 30 days",
-  "Marks & Spencer review velocity drop — Trustpilot -34% WoW",
+  "Twitter/X: Qantas negative sentiment +22% WoW — service failure trending",
+  "Reddit r/australia: Woolworths pricing thread — 4,200 upvotes, overwhelmingly negative",
+  "Instagram: Bonds engagement rate dropped to 0.8% vs category avg 2.4%",
+  "Facebook: JB Hi-Fi community group growing +18% MoM — under-leveraged",
+  "Marks & Spencer Trustpilot velocity drop — reviews -34% WoW",
   "Halfords profit warning — revenue guidance cut 12%, digital stagnant",
-  "Next plc: 3 analyst downgrades this week citing weak customer data strategy",
-  "Boots.com traffic down 18% vs 90-day avg — digital experience gap widening",
-  "Kingfisher EV/EBITDA 6.2x vs sector 9.1x — brand undervalued",
-  "John Lewis brand mentions +28% post campaign — sentiment inflecting",
+  "ABN Lookup: Myer Holdings Ltd — registered VIC, ACN 119 085 602 confirmed",
+  "Twitter/X: David Jones brand mentions +28% post campaign — sentiment inflecting",
+  "Reddit r/personalfinance: CommBank app UX complaints thread — 890 comments",
+  "Instagram: Cotton On UGC engagement +40% — community asset under-monetised",
   "Currys: Trustpilot 3.8 → 3.1 in 30 days, app store rating 2.7",
-  "WH Smith NPS at 3-year low — service model under pressure",
-  "Tesco Clubcard digital engagement +34% YoY — loyalty monetisation gap",
-  "Debenhams brand search volume +15% — licensing/revival signal",
-  "Ted Baker brand equity declining — acquisition pricing opportunity",
-  "Pets at Home: community platform engagement up 40% — under-monetised",
-  "B&Q online conversion rate 1.2% vs category avg 3.4% — commerce gap",
+  "ABN Lookup: Wesfarmers Ltd — ABN 28 008 984 049, registered WA confirmed",
+  "Reddit: Bunnings community — organic brand advocacy, 12k subreddit members",
+  "Twitter/X: Kmart AU brand sentiment positive ratio 78% — loyalty signal strong",
+  "Facebook: Harvey Norman page engagement down 34% — digital brand gap widening",
+  "Instagram: Mecca Cosmetica — UGC generating 3x brand content, high advocacy",
 ];
 
 // ─── SYSTEM PROMPT ─────────────────────────────────────────────────────────
@@ -80,7 +86,11 @@ const SYSTEM = `You are a senior investment analyst at a private equity firm spe
 
 You think like a PE investor screening an acquisition target: what is the gap between current enterprise value and potential value? What is the right entry price? What investment is required? What is the expected return?
 
-Your analysis draws on: social sentiment, community signals, customer reviews, NPS data, brand equity tracking (BrandZ, YouGov), annual reports, corporate narratives, analyst reports, industry benchmarks, digital performance, and customer satisfaction data.
+ORGANISATION IDENTIFICATION: Before analysing, determine the organisation's country of registration and headquarters. For Australian companies, reference ABN Lookup (abr.business.gov.au) and ASIC Connect records to confirm legal entity, ABN, ACN, and registered address. For US companies reference SEC EDGAR. For UK companies reference Companies House. Use this to confirm the correct currency, legal structure, and corporate narrative.
+
+SOCIAL & COMMUNITY SIGNALS: Your analysis must incorporate signals from social media platforms including Twitter/X (brand mentions, sentiment, engagement trends), Facebook (community size, engagement, brand page activity), Instagram (visual brand equity, follower engagement, UGC), Reddit (organic community discussion, brand sentiment in relevant subreddits, unfiltered customer voice). These social signals are critical inputs for the sentiment, social, and brand dimensions.
+
+Your analysis draws on: Twitter/X sentiment and mentions, Facebook community engagement, Instagram brand equity signals, Reddit organic discussion, customer reviews (Trustpilot, Google, App Store), NPS data, brand equity tracking (BrandZ, YouGov), annual reports, corporate narratives, ASX/NYSE/LSE filings, analyst reports, industry benchmarks, digital performance (SimilarWeb, App Annie), and customer satisfaction data.
 
 Return ONLY a valid JSON object. No markdown, no code fences, no commentary. Start with { end with }.
 
@@ -118,13 +128,15 @@ Schema:
     {
       "domain": string,
       "severity": "CRITICAL"|"SIGNIFICANT"|"MODERATE",
-      "currentState": string,
-      "potentialState": string,
-      "revenueUplift": string,
-      "costReduction": string,
-      "investmentRequired": string,
+      "currentState": string (2-3 sentences describing the specific problem with evidence),
+      "potentialState": string (2-3 sentences describing what good looks like with specific outcomes),
+      "interventions": [string] (3-5 specific actionable initiatives to close the gap),
+      "revenueUplift": string (currency-denominated estimate e.g. "AUD 45-80m p.a."),
+      "costReduction": string (currency-denominated estimate e.g. "AUD 12-20m p.a."),
+      "investmentRequired": string (currency-denominated estimate e.g. "AUD 15-25m over 2 years"),
       "timeHorizon": "0-12 months"|"1-2 years"|"2-4 years",
-      "kpiTargets": string
+      "kpiTargets": string (3-4 specific measurable KPI targets e.g. "NPS +20pts, conversion +2%, churn -15%"),
+      "benchmarkReference": string (reference to a comparable company or industry benchmark that achieved similar outcomes)
     }
   ],
   "valueBridgeModel": {
@@ -151,7 +163,7 @@ Score meanings — IMPORTANT: scores reflect how well the company CURRENTLY real
 Be specific, financially grounded, and reference real industry dynamics. Use real benchmarks where known.
 CRITICAL: Return only the JSON object. Nothing else.
 IMPORTANT: All financial figures must include the correct currency symbol. Use AUD (e.g. "AUD 2.4bn") for Australian companies, USD (e.g. "USD 1.2bn") for US companies, GBP (e.g. "£840m") for UK companies, and the appropriate local currency for all others. Never output a bare number without a currency symbol for any financial field.
-IMPORTANT: Be concise in all string fields — 1-2 sentences maximum per insight/description. Limit capabilityGaps to 4 items maximum. Limit catalysts and risks to 4 items each. Limit peerBenchmarks to 3 items. Limit priorityRoadmap to 3 phases. Keep all strings short — this is a data object not an essay.`;
+IMPORTANT: For capabilityGaps, be thorough — this is the most important section. Provide 4-5 gaps with full detail in all fields including 3-5 interventions each. For all other string fields keep to 1-2 sentences. Limit catalysts and risks to 4 items each. Limit peerBenchmarks to 3 items. Limit priorityRoadmap to 3 phases.`;
 
 // ─── API ───────────────────────────────────────────────────────────────────
 async function callClaude(system, user, onDone, onError) {
@@ -368,7 +380,7 @@ export default function App() {
     setLoading(true); setError("");
     const q=query.trim();
     callClaude(SYSTEM,
-      `Conduct a full customer strategy and brand-led value creation assessment for: "${q}". Analyse this organisation as a PE investor would — identifying the gap between current enterprise value and what could be unlocked through customer strategy transformation. Dimension weights for scoring context: ${DIMS.map(d=>`${d.label}:${weights[d.id]}%`).join(", ")}. Return only the JSON.`,
+      `Conduct a full customer strategy and brand-led value creation assessment for: "${q}". First identify the organisation's country of registration and headquarters to determine the correct currency and confirm entity details (ABN/ACN for Australian companies, SEC for US, Companies House for UK). Then analyse this organisation as a PE investor would — identifying the gap between current enterprise value and what could be unlocked through customer strategy transformation. Draw on all available signals including Twitter/X, Facebook, Instagram, Reddit and other social platforms to inform the sentiment, social and brand dimensions. Dimension weights: ${DIMS.map(d=>`${d.label}:${weights[d.id]}%`).join(", ")}. Return only the JSON.`,
       (text)=>{
         setLoading(false);
         try{
@@ -691,10 +703,10 @@ function AnalysisView({r,weights,weightedScore,watchlist,setWatchlist,compareIds
                 display:"flex",flexDirection:"column",
                 alignItems:"center",justifyContent:"center",
                 minHeight:64}}>
-                <div style={{fontFamily:"DM Mono",fontSize:9,fontWeight:700,color:item[2],
-                  letterSpacing:1,marginBottom:6,textTransform:"uppercase",
+                <div style={{fontFamily:"DM Sans",fontSize:9,fontWeight:400,color:C.muted,
+                  letterSpacing:0.5,marginBottom:5,textTransform:"uppercase",
                   textAlign:"center",lineHeight:1.3}}>{item[0]}</div>
-                <div style={{fontFamily:"DM Mono",fontSize:13,fontWeight:600,
+                <div style={{fontFamily:"DM Mono",fontSize:12,fontWeight:700,
                   color:item[2],lineHeight:1.2,textAlign:"center"}}>{item[1]||"—"}</div>
               </div>
             ))}
@@ -713,10 +725,10 @@ function AnalysisView({r,weights,weightedScore,watchlist,setWatchlist,compareIds
                 display:"flex",flexDirection:"column",
                 alignItems:"center",justifyContent:"center",
                 minHeight:64}}>
-                <div style={{fontFamily:"DM Mono",fontSize:9,fontWeight:700,color:col,
-                  letterSpacing:1,marginBottom:6,textTransform:"uppercase",
+                <div style={{fontFamily:"DM Sans",fontSize:9,fontWeight:400,color:C.muted,
+                  letterSpacing:0.5,marginBottom:5,textTransform:"uppercase",
                   textAlign:"center",lineHeight:1.3}}>{label}</div>
-                <div style={{fontFamily:"DM Mono",fontSize:13,fontWeight:600,
+                <div style={{fontFamily:"DM Mono",fontSize:12,fontWeight:700,
                   color:col,lineHeight:1.2,textAlign:"center"}}>{val||"—"}</div>
               </div>
             ))}
@@ -764,23 +776,48 @@ function AnalysisView({r,weights,weightedScore,watchlist,setWatchlist,compareIds
                       )}
                     </div>
                   </div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:6}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
                     <div>
                       <div style={{fontSize:8,fontFamily:"DM Mono",color:C.muted,
-                        letterSpacing:1.5,marginBottom:3}}>CURRENT STATE</div>
-                      <p style={{fontSize:11,color:C.text,lineHeight:1.6}}>{g.currentState}</p>
+                        letterSpacing:1.5,marginBottom:4}}>CURRENT STATE</div>
+                      <p style={{fontSize:11,color:C.text,lineHeight:1.65}}>{g.currentState}</p>
                     </div>
                     <div>
                       <div style={{fontSize:8,fontFamily:"DM Mono",color:C.accent,
-                        letterSpacing:1.5,marginBottom:3}}>POTENTIAL STATE</div>
-                      <p style={{fontSize:11,color:C.textHi,lineHeight:1.6}}>{g.potentialState}</p>
+                        letterSpacing:1.5,marginBottom:4}}>POTENTIAL STATE</div>
+                      <p style={{fontSize:11,color:C.textHi,lineHeight:1.65}}>{g.potentialState}</p>
                     </div>
                   </div>
-                  {g.kpiTargets&&(
-                    <p style={{fontSize:10,color:C.accent,fontFamily:"DM Mono"}}>
-                      ◆ {g.kpiTargets}
-                    </p>
+                  {(g.interventions||[]).length>0&&(
+                    <div style={{marginBottom:10}}>
+                      <div style={{fontSize:8,fontFamily:"DM Mono",color:C.accentB,
+                        letterSpacing:1.5,marginBottom:6}}>INTERVENTIONS</div>
+                      <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                        {g.interventions.map((iv,j)=>(
+                          <div key={j} style={{display:"flex",gap:7,alignItems:"flex-start"}}>
+                            <span style={{color:C.accentB,fontSize:9,flexShrink:0,marginTop:2}}>◆</span>
+                            <span style={{fontSize:11,color:C.text,lineHeight:1.55}}>{iv}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    {g.kpiTargets&&(
+                      <div>
+                        <div style={{fontSize:8,fontFamily:"DM Mono",color:C.accent,
+                          letterSpacing:1.5,marginBottom:4}}>KPI TARGETS</div>
+                        <p style={{fontSize:10,color:C.accent,lineHeight:1.55}}>{g.kpiTargets}</p>
+                      </div>
+                    )}
+                    {g.benchmarkReference&&(
+                      <div>
+                        <div style={{fontSize:8,fontFamily:"DM Mono",color:C.purple,
+                          letterSpacing:1.5,marginBottom:4}}>BENCHMARK</div>
+                        <p style={{fontSize:10,color:C.purple,lineHeight:1.55}}>{g.benchmarkReference}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
