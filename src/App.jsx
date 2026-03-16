@@ -163,19 +163,22 @@ Score meanings — IMPORTANT: scores reflect how well the company CURRENTLY real
 Be specific, financially grounded, and reference real industry dynamics. Use real benchmarks where known.
 CRITICAL: Return only the JSON object. Nothing else.
 IMPORTANT: All financial figures must include the correct currency symbol. Use AUD (e.g. "AUD 2.4bn") for Australian companies, USD (e.g. "USD 1.2bn") for US companies, GBP (e.g. "£840m") for UK companies, and the appropriate local currency for all others. Never output a bare number without a currency symbol for any financial field.
-IMPORTANT: Be concise throughout — this JSON must fit within 4000 tokens total.
-- capabilityGaps: 3 gaps maximum. currentState/potentialState: 1 sentence each. interventions: 3 items max, each under 12 words. kpiTargets: 2 metrics only. benchmarkReference: company name + one outcome only.
-- executiveSummary: 2 sentences maximum.
-- All other string fields: 1 sentence maximum.
-- catalysts: 3 items max. risks: 3 items max. peerBenchmarks: 2 items max. priorityRoadmap: 2 phases max, initiatives: 2 items each.
-- Every field must be present but keep values short. Do not pad or over-explain.`;
+CRITICAL LENGTH LIMIT: Your entire JSON response must be under 3000 tokens. Be extremely concise.
+- executiveSummary: 2 sentences only.
+- capabilityGaps: 3 gaps only. currentState/potentialState: 1 short sentence each. interventions: 3 items max, under 10 words each. kpiTargets: 2 metrics only. benchmarkReference: 1 line only.
+- All dimension insights: 1 sentence each. All signals: 5 words max.
+- catalysts: 3 items. risks: 3 items. peerBenchmarks: 2 items. priorityRoadmap: 2 phases, 2 initiatives each.
+- valueBridgeModel.valuationRationale: 1 sentence only.
+- investmentThesis: 2 sentences only.
+- customerProfile.audienceInsight: 1 sentence only.
+- No padding, no repetition. Every character counts.`;
 
 // ─── API ───────────────────────────────────────────────────────────────────
 // Using XMLHttpRequest instead of fetch for cross-browser reliability (Safari)
 function callClaude(system, user, onDone, onError) {
   const payload = JSON.stringify({
     model: MODEL,
-    max_tokens: 4000,
+    max_tokens: 3000,
     system,
     messages: [{ role:"user", content:user }]
   });
