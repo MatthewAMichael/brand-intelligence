@@ -1,32 +1,26 @@
 // api/chat.js — Vercel serverless proxy
 
 module.exports = async function handler(req, res) {
-  // Full CORS headers — required for Safari
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.setHeader("Access-Control-Max-Age", "86400");
   res.setHeader("Content-Type", "application/json");
 
-  // Safari sends a preflight OPTIONS request first — must respond 200
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: "ANTHROPIC_API_KEY not set" });
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: "ANTHROPIC_API_KEY not set on server" });
-  }
-
-  // Parse body — Vercel may pass it as string or object depending on content-type
   let body;
   try {
     body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-  } catch (e) {
-    return res.status(400).json({ error: "Invalid JSON body: " + e.message });
+  } catch(e) {
+    return res.status(400).json({ error: "Invalid JSON: " + e.message });
+  }
+
+  // Cap max_tokens at 4000 to stay within Vercel's 60s hobby plan timeout
+  if (body.max_tokens && body.max_tokens > 4000) {
+    body.max_tokens = 4000;
   }
 
   try {
@@ -41,13 +35,10 @@ module.exports = async function handler(req, res) {
     });
 
     const data = await response.json();
-
-    if (!response.ok) {
-      return res.status(response.status).json(data);
-    }
-
+    if (!response.ok) return res.status(response.status).json(data);
     return res.status(200).json(data);
-  } catch (error) {
+
+  } catch(error) {
     return res.status(500).json({ error: "Proxy error: " + error.message });
   }
 };

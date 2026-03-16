@@ -163,14 +163,19 @@ Score meanings — IMPORTANT: scores reflect how well the company CURRENTLY real
 Be specific, financially grounded, and reference real industry dynamics. Use real benchmarks where known.
 CRITICAL: Return only the JSON object. Nothing else.
 IMPORTANT: All financial figures must include the correct currency symbol. Use AUD (e.g. "AUD 2.4bn") for Australian companies, USD (e.g. "USD 1.2bn") for US companies, GBP (e.g. "£840m") for UK companies, and the appropriate local currency for all others. Never output a bare number without a currency symbol for any financial field.
-IMPORTANT: For capabilityGaps, be thorough — this is the most important section. Provide 4-5 gaps with full detail in all fields including 3-5 interventions each. For all other string fields keep to 1-2 sentences. Limit catalysts and risks to 4 items each. Limit peerBenchmarks to 3 items. Limit priorityRoadmap to 3 phases.`;
+IMPORTANT: Be concise throughout — this JSON must fit within 4000 tokens total.
+- capabilityGaps: 3 gaps maximum. currentState/potentialState: 1 sentence each. interventions: 3 items max, each under 12 words. kpiTargets: 2 metrics only. benchmarkReference: company name + one outcome only.
+- executiveSummary: 2 sentences maximum.
+- All other string fields: 1 sentence maximum.
+- catalysts: 3 items max. risks: 3 items max. peerBenchmarks: 2 items max. priorityRoadmap: 2 phases max, initiatives: 2 items each.
+- Every field must be present but keep values short. Do not pad or over-explain.`;
 
 // ─── API ───────────────────────────────────────────────────────────────────
 // Using XMLHttpRequest instead of fetch for cross-browser reliability (Safari)
 function callClaude(system, user, onDone, onError) {
   const payload = JSON.stringify({
     model: MODEL,
-    max_tokens: 8000,
+    max_tokens: 4000,
     system,
     messages: [{ role:"user", content:user }]
   });
@@ -181,6 +186,12 @@ function callClaude(system, user, onDone, onError) {
   xhr.timeout = 120000; // 2 minute timeout for long analyses
 
   xhr.onload = function() {
+    // Catch Vercel timeout / infrastructure errors before trying to parse
+    if (xhr.responseText.includes("FUNCTION_INVOCATION_TIMEOUT") ||
+        xhr.responseText.includes("FUNCTION_INVOCATION_FAILED")) {
+      onError("The analysis timed out on the server. Try a shorter company name or try again in a moment.");
+      return;
+    }
     try {
       const d = JSON.parse(xhr.responseText);
       if (xhr.status !== 200) {
@@ -193,7 +204,7 @@ function callClaude(system, user, onDone, onError) {
       if (s === -1 || e === -1) { onError("No JSON in response: " + t.slice(0,200)); return; }
       onDone(t.slice(s, e + 1));
     } catch(e) {
-      onError("Response parse error: " + e.message + " — " + xhr.responseText.slice(0,200));
+      onError("Response parse error: " + e.message + " — Raw: " + xhr.responseText.slice(0,150));
     }
   };
 
