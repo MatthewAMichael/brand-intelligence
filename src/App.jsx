@@ -82,93 +82,18 @@ const FEED_EVENTS = [
 ];
 
 // ─── SYSTEM PROMPT ─────────────────────────────────────────────────────────
-const SYSTEM = `You are a senior investment analyst at a private equity firm specialising in customer strategy and brand-led value creation. Assess whether the organisation's customer base, brand equity, and commercial capabilities are under-realised relative to what a transformation programme could unlock.
+const SYSTEM = `You are a senior PE investment analyst specialising in customer strategy and brand-led value creation. Assess whether the organisation's customer base, brand equity and commercial capabilities are under-realised.
 
-Think like a PE investor: what is the gap between current and potential enterprise value? What is the right entry price? What investment is required? What is the return?
+Think like a PE investor: what is the gap between current and potential enterprise value?
 
-ORGANISATION IDENTIFICATION: Determine country of registration and headquarters first. For Australian companies reference ABN Lookup. Use this to confirm currency (AUD for Australia, USD for US, GBP for UK).
+FIRST: Identify country of registration to determine currency (AUD=Australia, USD=US, GBP=UK).
+Draw on Twitter/X, Reddit, Instagram, Facebook, Trustpilot, App Store for sentiment signals.
 
-SOCIAL SIGNALS: Draw on Twitter/X, Facebook, Instagram, Reddit, Trustpilot, Google Reviews, App Store ratings for sentiment and brand dimensions.
+Return ONLY valid JSON. No markdown. No code fences. Start { end }.
 
-Return ONLY a valid JSON object. No markdown, no code fences. Start with { end with }.
+{"company":string,"ticker":string,"sector":string,"marketCap":string,"enterpriseValue":string,"investmentSignal":"BUY"|"WATCH"|"PASS","confidenceLevel":"HIGH"|"MEDIUM"|"LOW","overallScore":int,"executiveSummary":string,"customerStrategyScore":int,"brandEquityScore":int,"commercialScore":int,"dimensions":{"sentiment":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},"social":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},"reviews":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},"brand":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},"financial":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},"analyst":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string}},"customerProfile":{"estimatedCustomerBase":string,"npsEstimate":string,"satisfactionLevel":"HIGH"|"MEDIUM"|"LOW","loyaltyStrength":"STRONG"|"MODERATE"|"WEAK","communityEngagement":"HIGH"|"MEDIUM"|"LOW","audienceInsight":string},"capabilityGaps":[{"domain":string,"severity":"CRITICAL"|"SIGNIFICANT"|"MODERATE","currentState":string,"potentialState":string,"interventions":[string],"revenueUplift":string,"costReduction":string,"investmentRequired":string,"timeHorizon":"0-12 months"|"1-2 years"|"2-4 years","kpiTargets":string,"benchmarkReference":string}],"valueBridgeModel":{"currentEVEstimate":string,"potentialEVEstimate":string,"totalUpliftEstimate":string,"revenueGrowthComponent":string,"costEfficiencyComponent":string,"brandMultipleExpansion":string,"totalInvestmentRequired":string,"paybackPeriod":string,"directionalIRR":string,"acquisitionPriceGuidance":string,"valuationRationale":string},"catalysts":[string],"risks":[string],"investmentThesis":string,"peerBenchmarks":[{"company":string,"score":int,"signal":"BUY"|"WATCH"|"PASS","note":string}],"priorityRoadmap":[{"phase":string,"horizon":string,"initiatives":[string],"expectedValue":string}]}
 
-Schema:
-{
-  "company": string,
-  "ticker": string,
-  "sector": string,
-  "marketCap": string,
-  "enterpriseValue": string,
-  "investmentSignal": "BUY"|"WATCH"|"PASS",
-  "confidenceLevel": "HIGH"|"MEDIUM"|"LOW",
-  "overallScore": integer 0-100,
-  "executiveSummary": string,
-  "customerStrategyScore": integer 0-100,
-  "brandEquityScore": integer 0-100,
-  "commercialScore": integer 0-100,
-  "dimensions": {
-    "sentiment":  {"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},
-    "social":     {"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},
-    "reviews":    {"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},
-    "brand":      {"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},
-    "financial":  {"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},
-    "analyst":    {"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string}
-  },
-  "customerProfile": {
-    "estimatedCustomerBase": string,
-    "npsEstimate": string,
-    "satisfactionLevel": "HIGH"|"MEDIUM"|"LOW",
-    "loyaltyStrength": "STRONG"|"MODERATE"|"WEAK",
-    "communityEngagement": "HIGH"|"MEDIUM"|"LOW",
-    "audienceInsight": string
-  },
-  "capabilityGaps": [
-    {
-      "domain": string,
-      "severity": "CRITICAL"|"SIGNIFICANT"|"MODERATE",
-      "currentState": string,
-      "potentialState": string,
-      "interventions": [string],
-      "revenueUplift": string,
-      "costReduction": string,
-      "investmentRequired": string,
-      "timeHorizon": "0-12 months"|"1-2 years"|"2-4 years",
-      "kpiTargets": string,
-      "benchmarkReference": string
-    }
-  ],
-  "valueBridgeModel": {
-    "currentEVEstimate": string,
-    "potentialEVEstimate": string,
-    "totalUpliftEstimate": string,
-    "revenueGrowthComponent": string,
-    "costEfficiencyComponent": string,
-    "brandMultipleExpansion": string,
-    "totalInvestmentRequired": string,
-    "paybackPeriod": string,
-    "directionalIRR": string,
-    "acquisitionPriceGuidance": string,
-    "valuationRationale": string
-  },
-  "catalysts": [string],
-  "risks": [string],
-  "investmentThesis": string,
-  "peerBenchmarks": [{"company":string,"score":int,"signal":"BUY"|"WATCH"|"PASS","note":string}],
-  "priorityRoadmap": [{"phase":string,"horizon":string,"initiatives":[string],"expectedValue":string}]
-}
-
-SCORING: Low score = large gap = high opportunity. High score = already well-realised.
-CURRENCY: Always include currency symbol. AUD for Australian, USD for US, GBP for UK companies.
-
-OUTPUT GUIDELINES — keep total response under 3000 tokens:
-- executiveSummary: 2 sentences.
-- capabilityGaps: 3 items. currentState/potentialState: 1 sentence each. interventions: 3 items max. kpiTargets: 2 metrics. benchmarkReference: 1 line.
-- investmentThesis: 2 sentences.
-- dimension insights: 1 sentence each. signals: 5 words max.
-- catalysts/risks: 3 items each, 1 sentence each.
-- peerBenchmarks: 2 items. priorityRoadmap: 2 phases, 2 initiatives each.
-- valuationRationale: 1 sentence. audienceInsight: 1 sentence.
-CRITICAL: Return only the JSON object. Nothing else.`
+RULES: All strings 1 sentence max. capabilityGaps 3 items, interventions 2 each. catalysts/risks 3 each. peerBenchmarks 2. priorityRoadmap 2 phases 2 initiatives each. Low score = big gap = high opportunity. CRITICAL: JSON only.`
 
 // ─── API ───────────────────────────────────────────────────────────────────
 // Reads SSE stream from proxy, accumulates full text, then parses JSON
@@ -179,7 +104,7 @@ async function callClaude(system, user, onDone, onError) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 3500,
+        max_tokens: 2000,
         system,
         messages: [{ role: "user", content: user }]
       })

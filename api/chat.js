@@ -17,11 +17,11 @@ module.exports = async function handler(req, res) {
   }
 
   // Hard cap at 3500 tokens
-  body.max_tokens = Math.min(body.max_tokens || 3500, 3500);
+  body.max_tokens = Math.min(body.max_tokens || 2000, 2000);
 
   // Abort if Anthropic takes longer than 50s (leaves 10s buffer for Vercel)
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 50000);
+  const timer = setTimeout(() => controller.abort(), 35000);
 
   try {
     const upstream = await fetch("https://api.anthropic.com/v1/messages", {
