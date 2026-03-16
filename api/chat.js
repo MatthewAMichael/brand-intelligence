@@ -1,4 +1,4 @@
-// api/chat.js — Vercel Pro proxy, simple and reliable
+// api/chat.js — true Anthropic streaming proxy
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -16,8 +16,8 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: "Invalid JSON: " + e.message });
   }
 
-  // No token cap — let the app control this
   try {
+    // Use Anthropic streaming so we never buffer a large response
     const upstream = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -25,15 +25,48 @@ module.exports = async function handler(req, res) {
         "anthropic-version": "2023-06-01",
         "x-api-key": process.env.ANTHROPIC_API_KEY,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, stream: true }),
     });
 
-    // Read the complete response text then send it all at once
-    const text = await upstream.text();
-    res.setHeader("Content-Type", "application/json");
-    res.status(upstream.status).send(text);
+    // Stream SSE events back to client, accumulating the full text
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.status(200);
+
+    const reader = upstream.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = "";
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6).trim();
+        if (data === "[DONE]") continue;
+        try {
+          const evt = JSON.parse(data);
+          if (evt.type === "content_block_delta" && evt.delta?.text) {
+            fullText += evt.delta.text;
+          }
+        } catch {}
+      }
+    }
+
+    // Send the complete accumulated text as a single clean JSON response
+    res.write(`data: ${JSON.stringify({ fullText })}\n\n`);
+    res.end();
 
   } catch(error) {
-    res.status(500).json({ error: "Proxy error: " + error.message });
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Proxy error: " + error.message });
+    }
   }
 };

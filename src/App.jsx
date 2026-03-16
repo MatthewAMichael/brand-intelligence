@@ -168,7 +168,7 @@ DETAIL GUIDELINES:
 CRITICAL: Return only the JSON object. Nothing else.`
 
 // ─── API ───────────────────────────────────────────────────────────────────
-// fetch with streaming read — keeps connection alive during long responses
+// Reads SSE stream from proxy, accumulates full text, then parses JSON
 async function callClaude(system, user, onDone, onError) {
   try {
     const response = await fetch("/api/chat", {
@@ -182,50 +182,61 @@ async function callClaude(system, user, onDone, onError) {
       })
     });
 
-    // Read the full body via streaming so the connection stays warm
+    if (!response.ok && response.status !== 200) {
+      const err = await response.text();
+      onError("Server error " + response.status + ": " + err.slice(0, 200));
+      return;
+    }
+
+    // Read the SSE stream
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let raw = "";
+    let buffer = "";
+    let fullText = "";
+
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      raw += decoder.decode(value, { stream: true });
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("
+");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6).trim();
+        if (!data) continue;
+        try {
+          const evt = JSON.parse(data);
+          // Our proxy sends the final accumulated text as { fullText }
+          if (evt.fullText !== undefined) {
+            fullText = evt.fullText;
+          }
+        } catch {}
+      }
     }
 
-    // Check for Vercel infrastructure errors
-    if (raw.includes("FUNCTION_INVOCATION_TIMEOUT") || raw.includes("FUNCTION_INVOCATION_FAILED")) {
-      onError("The server timed out. Please try again.");
+    if (!fullText) { onError("Empty response — please try again."); return; }
+
+    // Check for Vercel errors in the text
+    if (fullText.includes("FUNCTION_INVOCATION_TIMEOUT") || fullText.includes("FUNCTION_INVOCATION_FAILED")) {
+      onError("The server timed out. Please try again in a moment.");
       return;
     }
 
-    let d;
+    // Extract JSON from the accumulated text
+    const s = fullText.indexOf("{");
+    const e = fullText.lastIndexOf("}");
+    if (s === -1 || e === -1) {
+      onError("No JSON found in response: " + fullText.slice(0, 200));
+      return;
+    }
+    const jsonStr = fullText.slice(s, e + 1);
+
+    // Validate before handing off
     try {
-      d = JSON.parse(raw);
-    } catch(e) {
-      onError("Parse error: " + e.message + " — " + raw.slice(0, 150));
-      return;
-    }
-
-    if (!response.ok) {
-      onError("API error " + response.status + ": " + (d?.error?.message || raw.slice(0,200)));
-      return;
-    }
-
-    const t = (d.content || []).map(b => b.text || "").join("");
-    if (!t) { onError("Empty response from API"); return; }
-    const s = t.indexOf("{");
-    if (s === -1) { onError("No JSON found in response"); return; }
-    let jsonStr = t.slice(s);
-    // If truncated, attempt to close open structures
-    const e = jsonStr.lastIndexOf("}");
-    if (e === -1) {
-      onError("Response was cut off before completing. Please try again.");
-      return;
-    }
-    jsonStr = jsonStr.slice(0, e + 1);
-    // Validate it parses before handing off
-    try { JSON.parse(jsonStr); } catch(parseErr) {
-      onError("Incomplete response received — please try again. (" + parseErr.message + ")");
+      JSON.parse(jsonStr);
+    } catch(parseErr) {
+      onError("Response was incomplete — please try again. (" + parseErr.message + ")");
       return;
     }
     onDone(jsonStr);
