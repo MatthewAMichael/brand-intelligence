@@ -95,15 +95,24 @@ Return ONLY valid JSON. No markdown. No code fences. Start { end }.
 
 RULES: All strings 1 sentence max. capabilityGaps 3 items, interventions 2 each. catalysts/risks 3 each. peerBenchmarks 2. priorityRoadmap 2 phases 2 initiatives each. Low score = big gap = high opportunity. CRITICAL: JSON only.`
 
-// ─── API — direct browser call, no Vercel proxy timeout issues ─────────────
+// ─── API — direct browser call, no proxy, no timeout ────────────────────────
+function getApiKey() {
+  return localStorage.getItem("anthropic-key") || "";
+}
+
 async function callClaude(system, user, onDone, onError) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    onError("NO_KEY");
+    return;
+  }
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "anthropic-version": "2023-06-01",
-        "x-api-key": import.meta.env.VITE_ANTHROPIC_KEY || "",
+        "x-api-key": apiKey,
         "anthropic-dangerous-direct-browser-access": "true"
       },
       body: JSON.stringify({
@@ -275,6 +284,8 @@ function RadarChart({data,weights,size=185}) {
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════════
 export default function App() {
+  const [apiKey,     setApiKey]     = useState(localStorage.getItem("anthropic-key")||"");
+  const [showKeyInput, setShowKeyInput] = useState(!localStorage.getItem("anthropic-key"));
   const [analyses,   setAnalyses]   = useState([]);
   const [activeId,   setActiveId]   = useState(null);
   const [query,      setQuery]      = useState("");
@@ -364,7 +375,11 @@ export default function App() {
           setQuery("");
         }catch(e){ setError("Parse error: "+e.message+". Got: "+text.slice(0,200)); }
       },
-      (msg)=>{ setLoading(false); setError(msg); }
+      (msg)=>{
+        setLoading(false);
+        if(msg==="NO_KEY") setShowKeyInput(true);
+        else setError(msg);
+      }
     );
   };
 
@@ -426,6 +441,12 @@ export default function App() {
             background:unread?C.goldDim:"transparent",
             color:unread?C.gold:C.muted,fontFamily:"DM Mono",letterSpacing:0.5}}>
           ◐ {unread>0?`${unread} ALERT${unread>1?"S":""}`:""} ALERTS
+        </button>
+        <button onClick={()=>setShowKeyInput(true)}
+          style={{padding:"5px 10px",borderRadius:4,fontSize:10,cursor:"pointer",
+            border:`1px solid ${C.border}`,background:"transparent",
+            color:C.muted,fontFamily:"DM Mono",letterSpacing:0.5}}>
+          ⚿ KEY
         </button>
       </header>
 
@@ -526,7 +547,54 @@ export default function App() {
         <main style={{flex:1,overflowY:"auto",padding:"22px 26px"}}>
           {view==="analysis"&&(
             <>
-              {!active&&!loading&&<Empty icon="⬡" text="ENTER A COMPANY TO BEGIN"/>}
+              {showKeyInput&&(
+                <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",
+                  display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+                  <div style={{background:C.surface,border:`1px solid ${C.accent}44`,
+                    borderRadius:10,padding:"32px 36px",width:420,maxWidth:"90vw"}}>
+                    <div style={{fontFamily:"DM Mono",fontSize:10,color:C.accent,
+                      letterSpacing:3,marginBottom:12}}>ANTHROPIC API KEY</div>
+                    <h2 style={{fontSize:18,fontWeight:600,color:C.textHi,marginBottom:8}}>
+                      Enter your API key
+                    </h2>
+                    <p style={{fontSize:12,color:C.muted,lineHeight:1.7,marginBottom:20}}>
+                      Your key is stored only in your browser and never sent anywhere except directly to Anthropic.
+                      Get your key from <span style={{color:C.accent}}>console.anthropic.com</span>
+                    </p>
+                    <input
+                      type="password"
+                      placeholder="sk-ant-..."
+                      value={apiKey}
+                      onChange={e=>setApiKey(e.target.value)}
+                      onKeyDown={e=>{
+                        if(e.key==="Enter"&&apiKey.startsWith("sk-ant-")){
+                          localStorage.setItem("anthropic-key",apiKey);
+                          setShowKeyInput(false);
+                        }
+                      }}
+                      style={{width:"100%",padding:"10px 12px",background:C.bg,
+                        border:`1px solid ${C.borderHi}`,borderRadius:6,
+                        color:C.textHi,fontSize:13,fontFamily:"DM Mono",marginBottom:12}}
+                    />
+                    <button
+                      onClick={()=>{
+                        if(apiKey.startsWith("sk-ant-")){
+                          localStorage.setItem("anthropic-key",apiKey);
+                          setShowKeyInput(false);
+                        }
+                      }}
+                      disabled={!apiKey.startsWith("sk-ant-")}
+                      style={{width:"100%",padding:"10px 0",borderRadius:5,
+                        background:apiKey.startsWith("sk-ant-")?C.accent:C.border,
+                        color:apiKey.startsWith("sk-ant-")?"#050E08":C.muted,
+                        border:"none",fontWeight:700,fontSize:11,
+                        fontFamily:"DM Mono",letterSpacing:1.5,cursor:"pointer"}}>
+                      SAVE KEY &amp; CONTINUE →
+                    </button>
+                  </div>
+                </div>
+              )}
+              {!active&&!loading&&!showKeyInput&&<Empty icon="⬡" text="ENTER A COMPANY TO BEGIN"/>}
               {active&&(
                 <AnalysisView r={active} weights={weights} weightedScore={weightedScore}
                   watchlist={watchlist} setWatchlist={setWatchlist}
