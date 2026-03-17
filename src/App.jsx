@@ -95,78 +95,42 @@ Return ONLY valid JSON. No markdown. No code fences. Start { end }.
 
 RULES: All strings 1 sentence max. capabilityGaps 3 items, interventions 2 each. catalysts/risks 3 each. peerBenchmarks 2. priorityRoadmap 2 phases 2 initiatives each. Low score = big gap = high opportunity. CRITICAL: JSON only.`
 
-// ─── API ───────────────────────────────────────────────────────────────────
-// Reads SSE stream from proxy, accumulates full text, then parses JSON
+// ─── API — direct browser call, no Vercel proxy timeout issues ─────────────
 async function callClaude(system, user, onDone, onError) {
   try {
-    const response = await fetch("/api/chat", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "anthropic-version": "2023-06-01",
+        "x-api-key": import.meta.env.VITE_ANTHROPIC_KEY || "",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 2000,
+        max_tokens: 4000,
         system,
         messages: [{ role: "user", content: user }]
       })
     });
 
-    if (!response.ok && response.status !== 200) {
-      const err = await response.text();
-      onError("Server error " + response.status + ": " + err.slice(0, 200));
+    const d = await response.json();
+    if (!response.ok) {
+      onError("API error " + response.status + ": " + (d?.error?.message || JSON.stringify(d)));
       return;
     }
-
-    // Read the SSE stream
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let fullText = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const data = line.slice(6).trim();
-        if (!data) continue;
-        try {
-          const evt = JSON.parse(data);
-          if (evt.error) { onError(evt.error); return; }
-          if (evt.fullText !== undefined) { fullText = evt.fullText; }
-        } catch {}
-      }
-    }
-
-    if (!fullText) { onError("Empty response — please try again."); return; }
-
-    // Check for Vercel errors in the text
-    if (fullText.includes("FUNCTION_INVOCATION_TIMEOUT") || fullText.includes("FUNCTION_INVOCATION_FAILED")) {
-      onError("The server timed out. Please try again in a moment.");
-      return;
-    }
-
-    // Strip markdown fences then extract JSON
-    const cleaned = fullText.replace(/```json/gi,"").replace(/```/g,"").trim();
+    const t = (d.content || []).map(b => b.text || "").join("");
+    if (!t) { onError("Empty response"); return; }
+    const cleaned = t.replace(/```json/gi,"").replace(/```/g,"").trim();
     const s = cleaned.indexOf("{");
     const e = cleaned.lastIndexOf("}");
-    if (s === -1 || e === -1) {
-      onError("No JSON found in response: " + cleaned.slice(0, 200));
-      return;
-    }
+    if (s === -1 || e === -1) { onError("No JSON in response"); return; }
     const jsonStr = cleaned.slice(s, e + 1);
-
-    // Validate before handing off
-    try {
-      JSON.parse(jsonStr);
-    } catch(parseErr) {
-      onError("Response was incomplete — please try again. (" + parseErr.message + ")");
+    try { JSON.parse(jsonStr); } catch(pe) {
+      onError("Incomplete response — please try again.");
       return;
     }
     onDone(jsonStr);
-
   } catch(e) {
     onError("Network error: " + e.message);
   }
