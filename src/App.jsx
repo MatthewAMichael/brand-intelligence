@@ -18,9 +18,44 @@ const C = {
 };
 
 // investment signal: green=buy, gold=watch, red=pass
+// Investment score: 0-100. 70-100=BUY(green), 40-69=WATCH(gold), 0-39=PASS(red)
+// Smooth colour interpolation across the full range
+function scoreToColor(n) {
+  const s = Math.max(0, Math.min(100, n || 0));
+  if (s >= 70) {
+    // green zone: interpolate from gold-green at 70 to pure green at 100
+    const t = (s - 70) / 30;
+    const r = Math.round(245 * (1-t) + 0 * t);
+    const g = Math.round(200 * (1-t) + 227 * t);
+    const b = Math.round(66 * (1-t) + 150 * t);
+    return `rgb(${r},${g},${b})`;
+  } else if (s >= 40) {
+    // watch zone: interpolate from red-orange at 40 to gold at 69
+    const t = (s - 40) / 29;
+    const r = Math.round(255 * (1-t) + 245 * t);
+    const g = Math.round(69 * (1-t) + 200 * t);
+    const b = Math.round(96 * (1-t) + 66 * t);
+    return `rgb(${r},${g},${b})`;
+  } else {
+    // pass zone: interpolate from dark-red at 0 to red at 39
+    const t = s / 39;
+    const r = Math.round(180 * (1-t) + 255 * t);
+    const g = Math.round(20 * (1-t) + 69 * t);
+    const b = Math.round(20 * (1-t) + 96 * t);
+    return `rgb(${r},${g},${b})`;
+  }
+}
+function scoreToBand(n) {
+  const s = Math.max(0, Math.min(100, n || 0));
+  if (s >= 70) return "BUY";
+  if (s >= 40) return "WATCH";
+  return "PASS";
+}
 const inv = r => r==="BUY" ? C.green : r==="WATCH" ? C.gold : C.red;
 // dimension score colour (low score = under-realised = opportunity)
-const sc = s => s >= 70 ? C.green : s >= 45 ? C.gold : C.red;
+const sc = s => s >= 70 ? C.green : s >= 40 ? C.gold : C.red;
+// For dimension scores: low = big gap = opportunity. Use a neutral scale.
+const dimColor = s => s >= 70 ? C.green : s >= 40 ? C.gold : C.red;
 const clamp = (v,a,b) => Math.min(b,Math.max(a,v));
 const fmt = d => new Date(d).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"2-digit"});
 
@@ -91,21 +126,24 @@ Draw on Twitter/X, Reddit, Instagram, Facebook, Trustpilot, App Store for sentim
 
 Return ONLY valid JSON. No markdown. No code fences. Start { end }.
 
-{"company":string,"ticker":string,"sector":string,"marketCap":string,"enterpriseValue":string,"investmentSignal":"BUY"|"WATCH"|"PASS","confidenceLevel":"HIGH"|"MEDIUM"|"LOW","overallScore":int,"executiveSummary":string,"customerStrategyScore":int,"brandEquityScore":int,"commercialScore":int,"dimensions":{"sentiment":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},"social":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},"reviews":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},"brand":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},"financial":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},"analyst":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string}},"customerProfile":{"estimatedCustomerBase":string,"npsEstimate":string,"satisfactionLevel":"HIGH"|"MEDIUM"|"LOW","loyaltyStrength":"STRONG"|"MODERATE"|"WEAK","communityEngagement":"HIGH"|"MEDIUM"|"LOW","audienceInsight":string},"capabilityGaps":[{"domain":string,"severity":"CRITICAL"|"SIGNIFICANT"|"MODERATE","currentState":string,"potentialState":string,"interventions":[string],"revenueUplift":string,"costReduction":string,"investmentRequired":string,"timeHorizon":"0-12 months"|"1-2 years"|"2-4 years","kpiTargets":string,"benchmarkReference":string}],"valueBridgeModel":{"currentEVEstimate":string,"potentialEVEstimate":string,"totalUpliftEstimate":string,"revenueGrowthComponent":string,"costEfficiencyComponent":string,"brandMultipleExpansion":string,"totalInvestmentRequired":string,"paybackPeriod":string,"directionalIRR":string,"acquisitionPriceGuidance":string,"valuationRationale":string},"catalysts":[string],"risks":[string],"investmentThesis":string,"peerBenchmarks":[{"company":string,"score":int,"signal":"BUY"|"WATCH"|"PASS","note":string}],"priorityRoadmap":[{"phase":string,"horizon":string,"initiatives":[string],"expectedValue":string}]}
+{"company":string,"ticker":string,"sector":string,"marketCap":string,"enterpriseValue":string,"investmentScore": integer 0-100 (100=buy immediately, 0=avoid entirely),"confidenceLevel":"HIGH"|"MEDIUM"|"LOW","overallScore":int,"executiveSummary":string,"gapAnalysis":{"customerStrategy":{"current":int,"potential":int,"gapLabel":"LARGE"|"MEDIUM"|"SMALL","gapReason":string},"brandEquity":{"current":int,"potential":int,"gapLabel":"LARGE"|"MEDIUM"|"SMALL","gapReason":string},"commercial":{"current":int,"potential":int,"gapLabel":"LARGE"|"MEDIUM"|"SMALL","gapReason":string},"digital":{"current":int,"potential":int,"gapLabel":"LARGE"|"MEDIUM"|"SMALL","gapReason":string},"dataPersonalisation":{"current":int,"potential":int,"gapLabel":"LARGE"|"MEDIUM"|"SMALL","gapReason":string},"serviceRetention":{"current":int,"potential":int,"gapLabel":"LARGE"|"MEDIUM"|"SMALL","gapReason":string},"communityAdvocacy":{"current":int,"potential":int,"gapLabel":"LARGE"|"MEDIUM"|"SMALL","gapReason":string}},"dimensions":{"sentiment":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},"social":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},"reviews":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},"brand":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},"financial":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string},"analyst":{"score":int,"insight":string,"signal":string,"trend":"UP"|"DOWN"|"FLAT","source":string}},"customerProfile":{"estimatedCustomerBase":string,"npsEstimate":string,"satisfactionLevel":"HIGH"|"MEDIUM"|"LOW","loyaltyStrength":"STRONG"|"MODERATE"|"WEAK","communityEngagement":"HIGH"|"MEDIUM"|"LOW","audienceInsight":string},"capabilityGaps":[{"domain":string,"severity":"CRITICAL"|"SIGNIFICANT"|"MODERATE","currentState":string,"potentialState":string,"interventions":[string],"revenueUplift":string,"costReduction":string,"investmentRequired":string,"timeHorizon":"0-12 months"|"1-2 years"|"2-4 years","kpiTargets":string,"benchmarkReference":string}],"valueBridgeModel":{"currentEVEstimate":string,"potentialEVEstimate":string,"totalUpliftEstimate":string,"revenueGrowthComponent":string,"costEfficiencyComponent":string,"brandMultipleExpansion":string,"totalInvestmentRequired":string,"paybackPeriod":string,"directionalIRR":string,"acquisitionPriceGuidance":string,"valuationRationale":string},"catalysts":[string],"risks":[string],"investmentThesis":string,"peerBenchmarks":[{"company":string,"score":int,"score":int,"note":string}],"priorityRoadmap":[{"phase":string,"horizon":string,"initiatives":[string],"expectedValue":string}]}
 
-RULES: All strings 1 sentence max. capabilityGaps 3 items, interventions 2 each. catalysts/risks 3 each. peerBenchmarks 2. priorityRoadmap 2 phases 2 initiatives each. Low score = big gap = high opportunity. CRITICAL: JSON only.`
+INVESTMENT SCORE: Rate 0-100 where 100 = buy immediately with maximum confidence, 0 = avoid entirely.
+- 70-100 = BUY: Strong customer value gap with clear unlock path, motivated management, realistic financials
+- 40-69 = WATCH: Opportunity exists but risk, complexity or uncertainty reduces conviction
+- 0-39 = PASS: Gaps too large, turnaround too costly, or market dynamics unfavourable
+Be rigorous — most companies should score 35-65. Reserve 80+ for exceptional opportunities only.
+GAP ANALYSIS: You MUST populate all 7 gapAnalysis dimensions: customerStrategy, brandEquity, commercial, digital, dataPersonalisation, serviceRetention, communityAdvocacy. For each provide current (0-100, where the company is today), potential (0-100, what is achievable), gapLabel (LARGE if gap>25, MEDIUM if 10-25, SMALL if <10), and gapReason (1 specific sentence).
+RULES: All strings 1 sentence max. capabilityGaps 3 items, interventions 2 each. catalysts/risks 3 each. peerBenchmarks 2 items with score int. priorityRoadmap 2 phases 2 initiatives each. CRITICAL: JSON only.`
 
-// ─── API — direct browser call, no proxy, no timeout ────────────────────────
+// ─── API — direct browser call, no proxy ────────────────────────────────────
 function getApiKey() {
   return localStorage.getItem("anthropic-key") || "";
 }
 
 async function callClaude(system, user, onDone, onError) {
   const apiKey = getApiKey();
-  if (!apiKey) {
-    onError("NO_KEY");
-    return;
-  }
+  if (!apiKey) { onError("NO_KEY"); return; }
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -117,24 +155,23 @@ async function callClaude(system, user, onDone, onError) {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 4000,
+        max_tokens: 6000,
         system,
         messages: [{ role: "user", content: user }]
       })
     });
-
     const d = await response.json();
     if (!response.ok) {
       onError("API error " + response.status + ": " + (d?.error?.message || JSON.stringify(d)));
       return;
     }
-    const t = (d.content || []).map(b => b.text || "").join("");
+    const t = (d.content||[]).map(b=>b.text||"").join("");
     if (!t) { onError("Empty response"); return; }
     const cleaned = t.replace(/```json/gi,"").replace(/```/g,"").trim();
     const s = cleaned.indexOf("{");
     const e = cleaned.lastIndexOf("}");
-    if (s === -1 || e === -1) { onError("No JSON in response"); return; }
-    const jsonStr = cleaned.slice(s, e + 1);
+    if (s===-1||e===-1) { onError("No JSON found"); return; }
+    const jsonStr = cleaned.slice(s,e+1);
     try { JSON.parse(jsonStr); } catch(pe) {
       onError("Incomplete response — please try again.");
       return;
@@ -170,27 +207,37 @@ const Meter = ({value,color,height=4,max=100}) => (
 );
 
 const ScoreBadge = ({score,size=52,signal=null}) => {
-  const col = signal ? inv(signal) : sc(score);
+  // Always use the numeric score for colour; signal only for label fallback
+  const numScore = typeof score === "number" ? score : 50;
+  const col = scoreToColor(numScore);
+  const label = signal || scoreToBand(numScore);
   return (
     <div style={{width:size,height:size,borderRadius:"50%",display:"flex",
-      alignItems:"center",justifyContent:"center",flexShrink:0,
-      border:`2px solid ${col}`,background:col+"11",
-      color:col,fontWeight:700,fontSize:size*0.32,fontFamily:"monospace"}}>
-      {signal||score}
+      flexDirection:"column",alignItems:"center",justifyContent:"center",
+      flexShrink:0,border:`2px solid ${col}`,background:col+"18",gap:0}}>
+      <span style={{color:col,fontWeight:700,fontSize:size*0.30,
+        fontFamily:"monospace",lineHeight:1.1}}>{numScore}</span>
+      {size >= 44 && (
+        <span style={{color:col,fontWeight:600,fontSize:size*0.13,
+          fontFamily:"DM Mono",letterSpacing:0.5,lineHeight:1.2,
+          opacity:0.85}}>{label}</span>
+      )}
     </div>
   );
 };
 
-const SignalBadge = ({signal,large=false}) => {
-  const col=inv(signal);
+const SignalBadge = ({signal,score,large=false}) => {
+  // Use numeric score for colour if available, else fall back to signal string
+  const col = (typeof score === "number") ? scoreToColor(score) : inv(signal||"WATCH");
+  const band = (typeof score === "number") ? scoreToBand(score) : (signal||"WATCH");
   const icons={"BUY":"▲","WATCH":"◆","PASS":"▼"};
   return (
     <div style={{display:"flex",alignItems:"center",gap:6,
       background:col+"15",border:`1px solid ${col}33`,
       borderRadius:4,padding:large?"8px 16px":"4px 10px"}}>
-      <span style={{color:col,fontSize:large?16:11}}>{icons[signal]}</span>
+      <span style={{color:col,fontSize:large?16:11}}>{icons[band]||"◆"}</span>
       <span style={{fontFamily:"DM Mono",fontSize:large?14:10,fontWeight:600,
-        color:col,letterSpacing:1.5}}>{signal}</span>
+        color:col,letterSpacing:1.5}}>{band}</span>
     </div>
   );
 };
@@ -349,9 +396,19 @@ export default function App() {
         setLoading(false);
         try{
           const parsed=JSON.parse(text.replace(/```json|```/g,"").trim());
+          // investmentScore (0-100) is Claude's PE rating — use it as the primary score
+          // Keep investmentSignal as the band label derived from investmentScore
+          const invScore = parsed.investmentScore !== undefined
+            ? Math.max(0, Math.min(100, parsed.investmentScore))
+            : parsed.investmentSignal === "BUY" ? 72
+            : parsed.investmentSignal === "WATCH" ? 52
+            : 25;
+          parsed.investmentScore = invScore;
+          parsed.investmentSignal = scoreToBand(invScore);
+          parsed.overallScore = invScore;
           const id=Date.now().toString();
           const ws=weightedScore(parsed.dimensions);
-          const entry={...parsed,id,analysedAt:Date.now(),weightedScore:ws,scoreHistory:[ws]};
+          const entry={...parsed,id,analysedAt:Date.now(),weightedScore:ws,scoreHistory:[invScore]};
           setAnalyses(prev=>{
             const idx=prev.findIndex(a=>a.company.toLowerCase()===parsed.company.toLowerCase());
             if(idx>=0){
@@ -448,6 +505,7 @@ export default function App() {
             color:C.muted,fontFamily:"DM Mono",letterSpacing:0.5}}>
           ⚿ KEY
         </button>
+
       </header>
 
       {/* BODY */}
@@ -500,7 +558,7 @@ export default function App() {
                   borderRadius:5,marginBottom:3,cursor:"pointer",
                   transition:"all 0.15s",display:"block"}}>
                 <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:5}}>
-                  <ScoreBadge score={a.weightedScore||a.overallScore} size={36}
+                  <ScoreBadge score={a.investmentScore||a.overallScore} size={36}
                     signal={a.investmentSignal}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:600,fontSize:12,color:C.textHi,
@@ -511,13 +569,13 @@ export default function App() {
                   </div>
                   <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
                     {watchlist.includes(a.id)&&<span style={{color:C.gold,fontSize:11}}>★</span>}
-                    <Spark values={a.scoreHistory} color={inv(a.investmentSignal||"WATCH")}
+                    <Spark values={a.scoreHistory} color={scoreToColor(a.investmentScore||a.overallScore||50)}
                       width={36} height={15}/>
                   </div>
                 </div>
                 <div style={{display:"flex",gap:5,alignItems:"center"}}>
                   <Tag label={a.investmentSignal||"—"}
-                    color={inv(a.investmentSignal||"WATCH")}/>
+                    color={scoreToColor(a.investmentScore||a.overallScore||50)}/>
                   {a.valueBridgeModel?.totalUpliftEstimate&&(
                     <Tag label={a.valueBridgeModel.totalUpliftEstimate} color={C.green}/>
                   )}
@@ -548,11 +606,12 @@ export default function App() {
           {view==="analysis"&&(
             <>
               {showKeyInput&&(
-                <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",
-                  display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+                <div style={{position:"fixed",inset:0,zIndex:1000,
+                  background:"rgba(0,0,0,0.85)",display:"flex",
+                  alignItems:"center",justifyContent:"center"}}>
                   <div style={{background:C.surface,border:`1px solid ${C.accent}44`,
                     borderRadius:10,padding:"32px 36px",width:420,maxWidth:"90vw"}}>
-                    <div style={{fontFamily:"DM Mono",fontSize:10,color:C.accent,
+                    <div style={{fontFamily:"DM Mono",fontSize:9,color:C.accent,
                       letterSpacing:3,marginBottom:12}}>ANTHROPIC API KEY</div>
                     <h2 style={{fontSize:18,fontWeight:600,color:C.textHi,marginBottom:8}}>
                       Enter your API key
@@ -561,9 +620,7 @@ export default function App() {
                       Your key is stored only in your browser and never sent anywhere except directly to Anthropic.
                       Get your key from <span style={{color:C.accent}}>console.anthropic.com</span>
                     </p>
-                    <input
-                      type="password"
-                      placeholder="sk-ant-..."
+                    <input type="password" placeholder="sk-ant-..."
                       value={apiKey}
                       onChange={e=>setApiKey(e.target.value)}
                       onKeyDown={e=>{
@@ -574,8 +631,7 @@ export default function App() {
                       }}
                       style={{width:"100%",padding:"10px 12px",background:C.bg,
                         border:`1px solid ${C.borderHi}`,borderRadius:6,
-                        color:C.textHi,fontSize:13,fontFamily:"DM Mono",marginBottom:12}}
-                    />
+                        color:C.textHi,fontSize:13,fontFamily:"DM Mono",marginBottom:12}}/>
                     <button
                       onClick={()=>{
                         if(apiKey.startsWith("sk-ant-")){
@@ -618,14 +674,65 @@ export default function App() {
   );
 }
 
+
+// ── GapCard — reusable gap visualiser card ─────────────────────────────────
+function GapCard({label, g, col}) {
+  const gapCol = g.gapLabel==="LARGE" ? C.green : g.gapLabel==="MEDIUM" ? C.gold : C.muted;
+  return (
+    <div style={{background:C.surface,border:`1px solid ${C.border}`,
+      borderRadius:7,padding:"14px 16px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",
+        alignItems:"center",marginBottom:12}}>
+        <span style={{fontSize:9,fontFamily:"DM Mono",color:C.muted,
+          letterSpacing:1.5}}>{label.toUpperCase()}</span>
+        <span style={{fontSize:9,fontFamily:"DM Mono",fontWeight:700,
+          padding:"2px 8px",borderRadius:3,letterSpacing:1,
+          background:gapCol+"20",color:gapCol,
+          border:`1px solid ${gapCol}44`}}>{g.gapLabel} GAP</span>
+      </div>
+      <div style={{marginBottom:5}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+          <span style={{fontSize:8,fontFamily:"DM Mono",color:col,letterSpacing:1}}>POTENTIAL</span>
+          <span style={{fontSize:9,fontFamily:"DM Mono",color:col,fontWeight:600}}>{g.potential}</span>
+        </div>
+        <div style={{background:C.border,borderRadius:2,height:6,overflow:"hidden"}}>
+          <div style={{width:`${g.potential}%`,height:"100%",borderRadius:2,
+            background:`linear-gradient(90deg,${col}44,${col})`}}/>
+        </div>
+      </div>
+      <div style={{marginBottom:10}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+          <span style={{fontSize:8,fontFamily:"DM Mono",color:C.muted,letterSpacing:1}}>CURRENT</span>
+          <span style={{fontSize:9,fontFamily:"DM Mono",color:C.muted,fontWeight:600}}>{g.current}</span>
+        </div>
+        <div style={{background:C.border,borderRadius:2,height:6,overflow:"hidden"}}>
+          <div style={{width:`${g.current}%`,height:"100%",borderRadius:2,
+            background:`linear-gradient(90deg,${C.muted}44,${C.muted})`}}/>
+        </div>
+      </div>
+      <div style={{background:gapCol+"0D",border:`1px solid ${gapCol}22`,
+        borderRadius:4,padding:"6px 8px",marginBottom:8}}>
+        <div style={{fontSize:8,fontFamily:"DM Mono",color:gapCol,
+          letterSpacing:1,marginBottom:2}}>
+          +{Math.max(0, g.potential - g.current)} PTS OPPORTUNITY
+        </div>
+        <div style={{width:`${Math.max(0,(g.potential-g.current))}%`,
+          height:3,borderRadius:2,background:gapCol,opacity:0.7}}/>
+      </div>
+      <p style={{fontSize:11,color:C.text,lineHeight:1.55}}>{g.gapReason}</p>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ANALYSIS VIEW
 // ═══════════════════════════════════════════════════════════════════════════
 function AnalysisView({r,weights,weightedScore,watchlist,setWatchlist,compareIds,setCompareIds}) {
-  const ws=r.weightedScore||r.overallScore;
+  // investmentScore is Claude's 0-100 PE rating — use this as the primary display score
+  const ws=r.investmentScore||r.overallScore||r.weightedScore||50;
   const inWatch=watchlist.includes(r.id);
   const inCompare=compareIds.includes(r.id);
-  const sig=r.investmentSignal||"WATCH";
+  const sig=r.investmentSignal||scoreToBand(ws)||"WATCH";
   const vb=r.valueBridgeModel||{};
   const cp=r.customerProfile||{};
 
@@ -676,25 +783,6 @@ function AnalysisView({r,weights,weightedScore,watchlist,setWatchlist,compareIds
           </div>
         </div>
       )}
-
-      {/* SCORE TRIO */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:18}}>
-        {[
-          ["Customer Strategy",r.customerStrategyScore||ws,C.accent,"How effectively customer strategy drives growth"],
-          ["Brand Equity",r.brandEquityScore||ws,C.purple,"Strength and realisation of brand as a value asset"],
-          ["Commercial Execution",r.commercialScore||ws,C.accentB,"Revenue, conversion and commercial performance"],
-        ].map(([label,score,col,desc])=>(
-          <div key={label} style={{background:C.surface,border:`1px solid ${C.border}`,
-            borderRadius:7,padding:"12px 14px"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-              <span style={{fontSize:10,fontFamily:"DM Mono",color:C.muted,letterSpacing:1}}>{label.toUpperCase()}</span>
-              <span style={{fontFamily:"DM Mono",fontSize:16,fontWeight:700,color:sc(score)}}>{score}</span>
-            </div>
-            <Meter value={score} color={sc(score)}/>
-            <p style={{marginTop:6,fontSize:10,color:C.muted,lineHeight:1.5}}>{desc}</p>
-          </div>
-        ))}
-      </div>
 
       {/* VALUE BRIDGE */}
       {vb.currentEVEstimate&&(
@@ -846,28 +934,286 @@ function AnalysisView({r,weights,weightedScore,watchlist,setWatchlist,compareIds
         </>
       )}
 
+      {/* GAP VISUALISER — league table */}
+      {r.gapAnalysis&&(
+        <>
+          <Divider title="OPPORTUNITY GAP ANALYSIS"/>
+          <div style={{background:C.surface,border:`1px solid ${C.border}`,
+            borderRadius:8,overflow:"hidden",marginBottom:18}}>
+            {/* Column headers */}
+            <div style={{display:"grid",
+              gridTemplateColumns:"180px 1fr 80px 52px 100px",
+              gap:0,padding:"8px 16px",
+              borderBottom:`1px solid ${C.border}`,
+              background:C.surfaceHi}}>
+              {["DIMENSION","GAP VISUALISATION","CURRENT → POTENTIAL","GAP","SIGNAL"].map(h=>(
+                <div key={h} style={{fontSize:8,fontFamily:"DM Mono",
+                  color:C.muted,letterSpacing:1.5}}>{h}</div>
+              ))}
+            </div>
+            {/* Rows */}
+            {[
+              ["Customer Strategy",    r.gapAnalysis.customerStrategy,  C.accent],
+              ["Brand Equity",         r.gapAnalysis.brandEquity,       C.purple],
+              ["Commercial Execution", r.gapAnalysis.commercial,        C.accentB],
+              ["Digital & CX",         r.gapAnalysis.digital,           C.gold],
+              ["Data & Personalisation",r.gapAnalysis.dataPersonalisation,C.orange],
+              ["Service & Retention",  r.gapAnalysis.serviceRetention,  C.green],
+              ["Community & Advocacy", r.gapAnalysis.communityAdvocacy, C.accentB],
+            ].filter(([,g])=>g).map(([label,g,col],i)=>{
+              const gapCol = g.gapLabel==="LARGE"?C.green:g.gapLabel==="MEDIUM"?C.gold:C.muted;
+              const gap = Math.max(0, g.potential - g.current);
+              return (
+                <div key={label}>
+                  <div style={{display:"grid",
+                    gridTemplateColumns:"180px 1fr 80px 52px 100px",
+                    gap:0,padding:"12px 16px",alignItems:"center",
+                    borderBottom:`1px solid ${C.border}`,
+                    transition:"background 0.15s"}}
+                    className="hov">
+                    {/* Dimension name */}
+                    <div style={{fontSize:11,fontWeight:500,color:C.textHi,
+                      paddingRight:12}}>{label}</div>
+                    {/* Stacked bar */}
+                    <div style={{paddingRight:16}}>
+                      <div style={{position:"relative",height:8,
+                        background:C.border,borderRadius:4,overflow:"hidden"}}>
+                        {/* Potential bar (background) */}
+                        <div style={{position:"absolute",left:0,top:0,
+                          width:`${g.potential}%`,height:"100%",
+                          background:col+"28",borderRadius:4}}/>
+                        {/* Current bar (foreground) */}
+                        <div style={{position:"absolute",left:0,top:0,
+                          width:`${g.current}%`,height:"100%",
+                          background:`linear-gradient(90deg,${col}88,${col})`,
+                          borderRadius:4}}/>
+                        {/* Gap indicator line */}
+                        <div style={{position:"absolute",
+                          left:`${g.current}%`,top:0,
+                          width:`${gap}%`,height:"100%",
+                          background:gapCol+"33",
+                          borderLeft:`2px solid ${gapCol}`,
+                          borderRight:`2px solid ${gapCol}66`}}/>
+                      </div>
+                    </div>
+                    {/* Current → Potential */}
+                    <div style={{fontFamily:"DM Mono",fontSize:10,
+                      color:C.muted,whiteSpace:"nowrap"}}>
+                      <span style={{color:col}}>{g.current}</span>
+                      <span style={{color:C.muted}}> → </span>
+                      <span style={{color:col,fontWeight:600}}>{g.potential}</span>
+                    </div>
+                    {/* Gap pts */}
+                    <div style={{fontFamily:"DM Mono",fontSize:12,
+                      fontWeight:700,color:gapCol}}>+{gap}</div>
+                    {/* Signal badge */}
+                    <div style={{display:"flex",alignItems:"center"}}>
+                      <span style={{fontSize:9,fontFamily:"DM Mono",
+                        fontWeight:700,padding:"3px 8px",borderRadius:3,
+                        letterSpacing:1,background:gapCol+"18",
+                        color:gapCol,border:`1px solid ${gapCol}33`}}>
+                        {g.gapLabel} GAP
+                      </span>
+                    </div>
+                  </div>
+                  {/* Reason row — indented below */}
+                  <div style={{padding:"0 16px 10px 16px",
+                    borderBottom: i < 6 ? `1px solid ${C.border}` : "none"}}>
+                    <p style={{fontSize:11,color:C.muted,lineHeight:1.55,
+                      paddingLeft:0}}>{g.gapReason}</p>
+                  </div>
+                </div>
+              );
+            })}
+            {/* Summary footer */}
+            <div style={{padding:"10px 16px",background:C.surfaceHi,
+              display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+              <div style={{fontSize:9,fontFamily:"DM Mono",color:C.muted,letterSpacing:1}}>
+                TOTAL OPPORTUNITY
+              </div>
+              {["LARGE","MEDIUM","SMALL"].map(level=>{
+                const dims = [
+                  r.gapAnalysis.customerStrategy,r.gapAnalysis.brandEquity,
+                  r.gapAnalysis.commercial,r.gapAnalysis.digital,
+                  r.gapAnalysis.dataPersonalisation,r.gapAnalysis.serviceRetention,
+                  r.gapAnalysis.communityAdvocacy
+                ].filter(g=>g&&g.gapLabel===level);
+                const col = level==="LARGE"?C.green:level==="MEDIUM"?C.gold:C.muted;
+                return dims.length > 0 ? (
+                  <div key={level} style={{display:"flex",alignItems:"center",gap:5}}>
+                    <span style={{fontFamily:"DM Mono",fontSize:12,fontWeight:700,
+                      color:col}}>{dims.length}</span>
+                    <span style={{fontSize:9,fontFamily:"DM Mono",color:col,
+                      letterSpacing:1}}>{level} GAP{dims.length>1?"S":""}</span>
+                  </div>
+                ) : null;
+              })}
+              <div style={{marginLeft:"auto",fontFamily:"DM Mono",fontSize:10,
+                color:C.accent}}>
+                AVG GAP: {Math.round([
+                  r.gapAnalysis.customerStrategy,r.gapAnalysis.brandEquity,
+                  r.gapAnalysis.commercial,r.gapAnalysis.digital,
+                  r.gapAnalysis.dataPersonalisation,r.gapAnalysis.serviceRetention,
+                  r.gapAnalysis.communityAdvocacy
+                ].filter(g=>g).reduce((a,g)=>a+Math.max(0,g.potential-g.current),0)/
+                [r.gapAnalysis.customerStrategy,r.gapAnalysis.brandEquity,
+                  r.gapAnalysis.commercial,r.gapAnalysis.digital,
+                  r.gapAnalysis.dataPersonalisation,r.gapAnalysis.serviceRetention,
+                  r.gapAnalysis.communityAdvocacy
+                ].filter(g=>g).length||1)} PTS ACROSS 7 DIMENSIONS
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* TRANSFORMATION ROADMAP */}
+      {(r.priorityRoadmap||[]).length>0&&(
+        <>
+          <Divider title="TRANSFORMATION ROADMAP"/>
+          <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(r.priorityRoadmap.length,3)},1fr)`,
+            gap:10,marginBottom:18}}>
+            {r.priorityRoadmap.map((phase,i)=>(
+              <div key={i} style={{background:C.surface,
+                border:`1px solid ${i===0?C.accent+"44":i===1?C.gold+"44":C.purple+"44"}`,
+                borderRadius:7,overflow:"hidden"}}>
+                <div style={{background:i===0?C.accentDim:i===1?C.goldDim:C.purpleDim,
+                  padding:"10px 14px",borderBottom:`1px solid ${C.border}`}}>
+                  <div style={{display:"flex",alignItems:"center",
+                    justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <div style={{width:6,height:6,borderRadius:"50%",flexShrink:0,
+                        background:i===0?C.accent:i===1?C.gold:C.purple}}/>
+                      <span style={{fontFamily:"DM Mono",fontSize:9,letterSpacing:1.5,
+                        color:i===0?C.accent:i===1?C.gold:C.purple,
+                        textTransform:"uppercase"}}>{phase.horizon}</span>
+                    </div>
+                    {phase.expectedValue&&(
+                      <span style={{fontFamily:"DM Mono",fontSize:9,
+                        color:C.green,background:C.greenDim,
+                        padding:"2px 8px",borderRadius:3,
+                        border:`1px solid ${C.green}33`,
+                        whiteSpace:"nowrap",overflow:"hidden",
+                        textOverflow:"ellipsis",maxWidth:200}}>
+                        {phase.expectedValue}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{fontWeight:600,fontSize:13,color:C.textHi,
+                    marginTop:6,lineHeight:1.3}}>
+                    {(phase.phase||"").replace(/\s*\(months?\s*[\d\-]+\)/gi,"").trim()}
+                  </div>
+                </div>
+                <div style={{padding:"12px 14px"}}>
+                  {(phase.initiatives||[]).length>0
+                    ? (phase.initiatives||[]).map((init,j)=>(
+                        <div key={j} style={{display:"flex",gap:8,
+                          marginBottom:j<(phase.initiatives.length-1)?10:0,
+                          alignItems:"flex-start"}}>
+                          <div style={{width:4,height:4,borderRadius:"50%",flexShrink:0,
+                            marginTop:5,
+                            background:i===0?C.accent:i===1?C.gold:C.purple}}/>
+                          <span style={{fontSize:12,color:C.text,lineHeight:1.6}}>{init}</span>
+                        </div>
+                      ))
+                    : <p style={{fontSize:11,color:C.muted,fontStyle:"italic"}}>No initiatives specified</p>
+                  }
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* VALUE CATALYSTS & KEY RISKS */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:18}}>
+        {[["VALUE CATALYSTS",r.catalysts||[],C.green,"↑"],
+          ["KEY RISKS",r.risks||[],C.red,"↓"]].map(([title,items,col,arrow])=>(
+          <div key={title}>
+            <Divider title={title}/>
+            <div style={{background:C.surface,border:`1px solid ${C.border}`,
+              borderRadius:6,padding:"11px 14px"}}>
+              {items.map((item,i)=>(
+                <div key={i} style={{display:"flex",gap:7,marginBottom:7,
+                  fontSize:12,color:C.text,lineHeight:1.6}}>
+                  <span style={{color:col,flexShrink:0}}>{arrow}</span>{item}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
       {/* CUSTOMER PROFILE */}
       {cp.audienceInsight&&(
         <>
           <Divider title="CUSTOMER PROFILE & AUDIENCE INTELLIGENCE"/>
-          <div style={{background:C.surface,border:`1px solid ${C.border}`,
-            borderRadius:8,padding:"14px 18px",marginBottom:18}}>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:12}}>
-              {[
-                ["Customer Base",cp.estimatedCustomerBase,C.accentB],
-                ["NPS Estimate",cp.npsEstimate,sc(parseInt(cp.npsEstimate)||50)],
-                ["Satisfaction",cp.satisfactionLevel,cp.satisfactionLevel==="HIGH"?C.green:cp.satisfactionLevel==="MEDIUM"?C.gold:C.red],
-                ["Loyalty",cp.loyaltyStrength,cp.loyaltyStrength==="STRONG"?C.green:cp.loyaltyStrength==="MODERATE"?C.gold:C.red],
-                ["Community",cp.communityEngagement,cp.communityEngagement==="HIGH"?C.green:cp.communityEngagement==="MEDIUM"?C.gold:C.red],
-              ].map(([label,val,col])=>(
-                <div key={label} style={{textAlign:"center",padding:"8px 4px"}}>
-                  <div style={{fontFamily:"DM Mono",fontSize:13,fontWeight:600,color:col,marginBottom:3}}>{val||"—"}</div>
-                  <div style={{fontSize:9,color:C.muted,letterSpacing:0.8}}>{label}</div>
-                </div>
-              ))}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:18}}>
+            {/* Left — key metrics as signal cards */}
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {/* Top row: 3 signal indicators */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                {[
+                  ["Satisfaction", cp.satisfactionLevel,
+                    cp.satisfactionLevel==="HIGH"?C.green:cp.satisfactionLevel==="MEDIUM"?C.gold:C.red,
+                    cp.satisfactionLevel==="HIGH"?"▲":cp.satisfactionLevel==="MEDIUM"?"◆":"▼"],
+                  ["Loyalty", cp.loyaltyStrength,
+                    cp.loyaltyStrength==="STRONG"?C.green:cp.loyaltyStrength==="MODERATE"?C.gold:C.red,
+                    cp.loyaltyStrength==="STRONG"?"▲":cp.loyaltyStrength==="MODERATE"?"◆":"▼"],
+                  ["Community", cp.communityEngagement,
+                    cp.communityEngagement==="HIGH"?C.green:cp.communityEngagement==="MEDIUM"?C.gold:C.red,
+                    cp.communityEngagement==="HIGH"?"▲":cp.communityEngagement==="MEDIUM"?"◆":"▼"],
+                ].map(([label,val,col,icon])=>(
+                  <div key={label} style={{background:C.surface,border:`1px solid ${col}33`,
+                    borderRadius:7,padding:"12px 10px",textAlign:"center"}}>
+                    <div style={{fontSize:18,color:col,marginBottom:4}}>{icon}</div>
+                    <div style={{fontFamily:"DM Mono",fontSize:11,fontWeight:700,
+                      color:col,marginBottom:4}}>{val||"—"}</div>
+                    <div style={{fontSize:9,color:C.muted,letterSpacing:1,
+                      textTransform:"uppercase"}}>{label}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Bottom row: customer base + NPS */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                {[
+                  ["Est. Customer Base", cp.estimatedCustomerBase, C.accentB],
+                  ["NPS Estimate",       cp.npsEstimate,           sc(parseInt(cp.npsEstimate)||50)],
+                ].map(([label,val,col])=>(
+                  <div key={label} style={{background:C.surface,border:`1px solid ${C.border}`,
+                    borderRadius:7,padding:"12px 14px"}}>
+                    <div style={{fontFamily:"DM Mono",fontSize:9,color:C.muted,
+                      letterSpacing:1.5,marginBottom:8,textTransform:"uppercase"}}>{label}</div>
+                    <div style={{fontFamily:"DM Mono",fontSize:16,fontWeight:700,
+                      color:col,letterSpacing:-0.3}}>{val||"—"}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <p style={{fontSize:12,color:C.text,lineHeight:1.7,
-              borderTop:`1px solid ${C.border}`,paddingTop:10}}>{cp.audienceInsight}</p>
+            {/* Right — audience insight */}
+            <div style={{background:C.surface,border:`1px solid ${C.border}`,
+              borderRadius:7,padding:"18px 20px",display:"flex",flexDirection:"column",
+              justifyContent:"space-between"}}>
+              <div>
+                <div style={{fontFamily:"DM Mono",fontSize:9,color:C.muted,
+                  letterSpacing:2,marginBottom:12,textTransform:"uppercase"}}>
+                  AUDIENCE INSIGHT
+                </div>
+                <p style={{fontSize:13,color:C.textHi,lineHeight:1.8,
+                  marginBottom:16}}>{cp.audienceInsight}</p>
+              </div>
+              {/* Investment implication of customer profile */}
+              <div style={{borderTop:`1px solid ${C.border}`,paddingTop:12}}>
+                <div style={{fontFamily:"DM Mono",fontSize:9,color:C.accent,
+                  letterSpacing:1.5,marginBottom:6}}>INVESTMENT IMPLICATION</div>
+                <p style={{fontSize:11,color:C.text,lineHeight:1.65}}>
+                  {cp.loyaltyStrength==="STRONG"
+                    ? "Strong loyalty base provides a solid foundation for value uplift initiatives — lower acquisition cost and higher LTV potential."
+                    : cp.loyaltyStrength==="MODERATE"
+                    ? "Moderate loyalty signals meaningful churn risk and untapped retention value — a priority intervention area."
+                    : "Weak loyalty indicates significant customer strategy gaps — retention and experience investment has high return potential."}
+                </p>
+              </div>
+            </div>
           </div>
         </>
       )}
@@ -968,60 +1314,6 @@ function AnalysisView({r,weights,weightedScore,watchlist,setWatchlist,compareIds
 
 
 
-      {/* PRIORITY ROADMAP */}
-      {(r.priorityRoadmap||[]).length>0&&(
-        <>
-          <Divider title="TRANSFORMATION ROADMAP"/>
-          <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(r.priorityRoadmap.length,3)},1fr)`,
-            gap:10,marginBottom:18}}>
-            {r.priorityRoadmap.map((phase,i)=>(
-              <div key={i} style={{background:C.surface,border:`1px solid ${C.border}`,
-                borderRadius:7,padding:"12px 14px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                  <div>
-                    <div style={{fontFamily:"DM Mono",fontSize:8,color:C.muted,
-                      letterSpacing:2,marginBottom:3}}>{phase.horizon}</div>
-                    <div style={{fontWeight:600,fontSize:12,color:C.textHi}}>{phase.phase}</div>
-                  </div>
-                  {phase.expectedValue&&(
-                    <span style={{fontFamily:"DM Mono",fontSize:10,color:C.green,
-                      background:C.greenDim,padding:"2px 8px",borderRadius:3,
-                      border:`1px solid ${C.green}30`,flexShrink:0}}>
-                      {phase.expectedValue}
-                    </span>
-                  )}
-                </div>
-                {(phase.initiatives||[]).map((init,j)=>(
-                  <div key={j} style={{display:"flex",gap:6,marginBottom:5,alignItems:"flex-start"}}>
-                    <span style={{color:C.accent,fontSize:9,flexShrink:0,marginTop:2}}>◆</span>
-                    <span style={{fontSize:11,color:C.text,lineHeight:1.5}}>{init}</span>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* CATALYSTS / RISKS */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:18}}>
-        {[["VALUE CATALYSTS",r.catalysts||[],C.green,"↑"],
-          ["KEY RISKS",r.risks||[],C.red,"↓"]].map(([title,items,col,arrow])=>(
-          <div key={title}>
-            <Divider title={title}/>
-            <div style={{background:C.surface,border:`1px solid ${C.border}`,
-              borderRadius:6,padding:"11px 14px"}}>
-              {items.map((item,i)=>(
-                <div key={i} style={{display:"flex",gap:7,marginBottom:7,
-                  fontSize:12,color:C.text,lineHeight:1.6}}>
-                  <span style={{color:col,flexShrink:0}}>{arrow}</span>{item}
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
       <p style={{fontSize:8,color:C.muted,fontFamily:"DM Mono",letterSpacing:1,marginTop:8}}>
         ANALYSED {fmt(r.analysedAt)} · WEIGHTED SCORE {ws} · RAW SCORE {r.overallScore} · {sig}
       </p>
@@ -1098,7 +1390,7 @@ function WatchlistView({analyses,watchlist,setWatchlist,alerts,setAlerts,setActi
               </button>
             </div>
             <Meter value={a.weightedScore||a.overallScore}
-              color={inv(a.investmentSignal||"WATCH")} height={3}/>
+              color={scoreToColor(a.investmentScore||a.overallScore||50)} height={3}/>
             <div style={{display:"flex",justifyContent:"space-between",
               alignItems:"center",marginTop:9}}>
               <SignalBadge signal={a.investmentSignal||"WATCH"}/>
@@ -1106,7 +1398,7 @@ function WatchlistView({analyses,watchlist,setWatchlist,alerts,setAlerts,setActi
                 <Tag label={a.valueBridgeModel.totalUpliftEstimate} color={C.green}/>
               )}
               <Spark values={a.scoreHistory}
-                color={inv(a.investmentSignal||"WATCH")} width={55} height={18}/>
+                color={scoreToColor(a.investmentScore||a.overallScore||50)} width={55} height={18}/>
             </div>
           </div>
         ))}
@@ -1133,7 +1425,7 @@ function CompareView({analyses,compareIds,setCompareIds,weights}) {
       <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:22}}>
         {analyses.map(a=>(
           <Pill key={a.id} label={a.company} active={compareIds.includes(a.id)}
-            color={inv(a.investmentSignal||"WATCH")}
+            color={scoreToColor(a.investmentScore||a.overallScore||50)}
             onClick={()=>setCompareIds(c=>c.includes(a.id)?
               c.filter(x=>x!==a.id):[...c.slice(-2),a.id])}/>
         ))}
